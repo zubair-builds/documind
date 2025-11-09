@@ -68,7 +68,7 @@ export function calculateTopMerchants(
   transactions
     .filter((t) => t.type === 'DEBIT')
     .forEach((transaction) => {
-      const merchant = transaction.description;
+      const merchant = `${transaction.description} (${transaction.category || '-'})`;
       const existing = merchantMap.get(merchant) || { amount: 0, count: 0 };
       merchantMap.set(merchant, {
         amount: existing.amount + transaction.amount,
@@ -273,7 +273,7 @@ export function calculateSingleStatementSummary(
 /**
  * Parse month from statement date
  */
-export function parseStatementMonth(statementDate: string): { month: string; year: number } {
+export function parseStatementMonth(statementDate: string): { month: string; year: number; timestamp: number } {
   try {
     // Try to parse common date formats
     const date = new Date(statementDate);
@@ -281,6 +281,7 @@ export function parseStatementMonth(statementDate: string): { month: string; yea
       return {
         month: format(date, 'MMM yyyy'),
         year: date.getFullYear(),
+        timestamp: date.getTime(),
       };
     }
   } catch (e) {
@@ -292,6 +293,7 @@ export function parseStatementMonth(statementDate: string): { month: string; yea
   return {
     month: format(now, 'MMM yyyy'),
     year: now.getFullYear(),
+    timestamp: now.getTime(),
   };
 }
 

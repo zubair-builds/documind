@@ -4,15 +4,20 @@ import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import {
-  VictoryPie,
-  VictoryBar,
-  VictoryLine,
-  VictoryChart,
-  VictoryAxis,
-  VictoryTheme,
-  VictoryTooltip,
-  VictoryLegend,
-} from 'victory';
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from 'recharts';
 import type {
   CategorySpending,
   MerchantSpending,
@@ -21,9 +26,11 @@ import type {
   BudgetRecommendation,
 } from '@/types/analytics';
 import { formatAnalysisTime } from '@/lib/analysisStats';
+import { formatCurrency } from '@/lib/formatters';
 
 interface PdfOption {
   id: string;
+  statementDate: string;
   filename: string;
 }
 
@@ -80,20 +87,15 @@ export default function AnalyticsPage() {
 
   const fetchPdfOptions = async () => {
     try {
-      const response = await fetch('/api/pdfs?limit=100');
+      // Fetch PDFs with statements, sorted by due date ascending
+      const response = await fetch('/api/pdfs/with-statements?limit=100&sortBy=dueDate&sortOrder=asc');
       const data = await response.json();
       if (data.success && data.pdfs) {
-        // Filter only analyzed statements
-        const analyzedPdfs = await Promise.all(
-          data.pdfs.map(async (pdf: any) => {
-            const stmtResponse = await fetch(`/api/statements/${pdf.id}`);
-            return stmtResponse.ok ? pdf : null;
-          })
-        );
-        const filtered = analyzedPdfs.filter((p) => p !== null) as PdfOption[];
-        setPdfOptions(filtered);
-        if (filtered.length > 0 && !selectedPdfId) {
-          setSelectedPdfId(filtered[0].id);
+        // Filter only analyzed statements (those with documentType='statement')
+        const analyzed = data.pdfs.filter((pdf: any) => pdf.documentType === 'statement');
+        setPdfOptions(analyzed);
+        if (analyzed.length > 0 && !selectedPdfId) {
+          setSelectedPdfId(analyzed[0].id);
         }
       }
     } catch (err) {
@@ -143,15 +145,6 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
   };
 
   const handleLogout = async () => {
@@ -216,31 +209,28 @@ export default function AnalyticsPage() {
             <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
               <button
                 onClick={() => setViewMode('aggregate')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  viewMode === 'aggregate'
-                    ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow'
-                    : 'text-gray-600 dark:text-gray-400'
-                }`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === 'aggregate'
+                  ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow'
+                  : 'text-gray-600 dark:text-gray-400'
+                  }`}
               >
                 All Statements
               </button>
               <button
                 onClick={() => setViewMode('single')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  viewMode === 'single'
-                    ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow'
-                    : 'text-gray-600 dark:text-gray-400'
-                }`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === 'single'
+                  ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow'
+                  : 'text-gray-600 dark:text-gray-400'
+                  }`}
               >
                 Single Statement
               </button>
               <button
                 onClick={() => setViewMode('analysis')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  viewMode === 'analysis'
-                    ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow'
-                    : 'text-gray-600 dark:text-gray-400'
-                }`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === 'analysis'
+                  ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow'
+                  : 'text-gray-600 dark:text-gray-400'
+                  }`}
               >
                 AI Analysis Stats
               </button>
@@ -257,11 +247,15 @@ export default function AnalyticsPage() {
                 {pdfOptions.length === 0 ? (
                   <option>No analyzed statements</option>
                 ) : (
-                  pdfOptions.map((pdf) => (
-                    <option key={pdf.id} value={pdf.id}>
-                      {pdf.filename}
-                    </option>
-                  ))
+                  pdfOptions.map((pdf) => {
+                    const d = new Date(pdf.statementDate);
+                    const formattedDate = d.toLocaleString('default', { month: 'short', year: 'numeric' });
+                    return (
+                      <option key={pdf.id} value={pdf.id}>
+                        {formattedDate}
+                      </option>
+                    )
+                  })
                 )}
               </select>
             )}
@@ -328,19 +322,42 @@ export default function AnalyticsPage() {
                 Spending by Category
               </h2>
               <div className="flex flex-col md:flex-row items-center justify-center">
-                <VictoryPie
-                  data={singleAnalytics.categoryBreakdown.map((c: CategorySpending) => ({
-                    x: c.category,
-                    y: c.amount,
-                    label: `${c.category}\nRs ${c.amount.toFixed(0)}`,
-                  }))}
-                  colorScale={singleAnalytics.categoryBreakdown.map((c: CategorySpending) => c.color || '#6b7280')}
-                  labelRadius={100}
-                  style={{ labels: { fill: '#fff', fontSize: 14, fontWeight: 'bold' } }}
-                  width={500}
-                  height={500}
-                  padding={{ top: 50, bottom: 50, left: 50, right: 50 }}
-                />
+                <ResponsiveContainer width="100%" height={400}>
+                  <PieChart>
+                    <Pie
+                      data={singleAnalytics.categoryBreakdown}
+                      dataKey="amount"
+                      nameKey="category"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={150}
+                      fill="#8884d8"
+                      labelLine={false}
+                      label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
+                        const RADIAN = Math.PI / 180;
+                        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                        return (
+                          <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+                            {`${(percent * 100).toFixed(0)}%`}
+                          </text>
+                        );
+                      }}
+                    >
+                      {singleAnalytics.categoryBreakdown.map((entry: CategorySpending, index: number) => (
+                        <Cell key={`cell-${index}`} fill={entry.color || '#6b7280'} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: number) => formatCurrency(value)}
+                      contentStyle={{ backgroundColor: '#333', border: '1px solid #555', borderRadius: '5px' }}
+                      labelStyle={{ color: '#fff' }}
+                      itemStyle={{ color: '#fff' }}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
                 <div className="mt-4 md:mt-0 md:ml-8">
                   {singleAnalytics.categoryBreakdown.map((cat: CategorySpending) => (
                     <div key={cat.category} className="flex items-center gap-3 mb-3">
@@ -375,35 +392,23 @@ export default function AnalyticsPage() {
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
                 Spending Timeline
               </h2>
-              <VictoryChart 
-                theme={VictoryTheme.material} 
-                height={400}
-                padding={{ top: 50, bottom: 80, left: 80, right: 50 }}
-              >
-                <VictoryAxis
-                  style={{
-                    tickLabels: { fontSize: 12, padding: 5 },
-                  }}
-                />
-                <VictoryAxis
-                  dependentAxis
-                  tickFormat={(x) => `Rs ${x}`}
-                  style={{
-                    tickLabels: { fontSize: 12, padding: 5 },
-                  }}
-                />
-                <VictoryBar
-                  data={singleAnalytics.dailySpending.map((d: DailySpending) => ({
-                    x: d.date,
-                    y: d.debitAmount,
-                  }))}
-                  style={{ data: { fill: '#ef4444' } }}
-                  labelComponent={<VictoryTooltip />}
-                  labels={({ datum }) => `Rs ${datum.y.toFixed(0)}`}
-                />
-              </VictoryChart>
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={singleAnalytics.dailySpending}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                  <Tooltip
+                    formatter={(value: number) => formatCurrency(value)}
+                    contentStyle={{ backgroundColor: '#333', border: '1px solid #555', borderRadius: '5px' }}
+                    labelStyle={{ color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="debitAmount" stroke="#ef4444" name="Debits" />
+                  <Line type="monotone" dataKey="creditAmount" stroke="#22c55e" name="Credits" />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-
             {/* Top Merchants */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 mb-6">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
@@ -437,26 +442,24 @@ export default function AnalyticsPage() {
                 {singleRecommendations.map((rec, index) => (
                   <div
                     key={index}
-                    className={`p-6 rounded-lg border-l-4 ${
-                      rec.priority === 'high'
-                        ? 'bg-red-50 dark:bg-red-900/20 border-red-500'
-                        : rec.priority === 'medium'
+                    className={`p-6 rounded-lg border-l-4 ${rec.priority === 'high'
+                      ? 'bg-red-50 dark:bg-red-900/20 border-red-500'
+                      : rec.priority === 'medium'
                         ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500'
                         : 'bg-green-50 dark:bg-green-900/20 border-green-500'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                         {rec.title}
                       </h3>
                       <span
-                        className={`px-3 py-1 text-xs rounded-full ${
-                          rec.priority === 'high'
-                            ? 'bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200'
-                            : rec.priority === 'medium'
+                        className={`px-3 py-1 text-xs rounded-full ${rec.priority === 'high'
+                          ? 'bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200'
+                          : rec.priority === 'medium'
                             ? 'bg-yellow-200 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200'
                             : 'bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200'
-                        }`}
+                          }`}
                       >
                         {rec.priority.toUpperCase()}
                       </span>
@@ -512,36 +515,19 @@ export default function AnalyticsPage() {
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
                 Monthly Spending Trends
               </h2>
-              <VictoryChart 
-                theme={VictoryTheme.material} 
-                height={400}
-                padding={{ top: 50, bottom: 80, left: 100, right: 50 }}
-              >
-                <VictoryAxis
-                  style={{
-                    tickLabels: { fontSize: 12, angle: -45, padding: 15 },
-                  }}
-                />
-                <VictoryAxis
-                  dependentAxis
-                  tickFormat={(x) => `Rs ${x}`}
-                  style={{
-                    tickLabels: { fontSize: 12, padding: 5 },
-                  }}
-                />
-                <VictoryLine
-                  data={aggregateAnalytics.monthlyTrends.map((m: MonthlyData) => ({
-                    x: m.month,
-                    y: m.totalSpending,
-                  }))}
-                  style={{
-                    data: { stroke: '#3b82f6', strokeWidth: 3 },
-                    parent: { border: '1px solid #ccc' },
-                  }}
-                  labelComponent={<VictoryTooltip />}
-                  labels={({ datum }) => `Rs ${datum.y.toFixed(0)}`}
-                />
-              </VictoryChart>
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={aggregateAnalytics.monthlyTrends}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="dueDate"
+                    tickFormatter={(date) => new Date(date).toLocaleDateString('default', { month: 'short', year: 'numeric' })}
+                  />
+                  <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                  <Tooltip formatter={(value: number, name: string, props) => [formatCurrency(value), props.payload.month]} contentStyle={{ backgroundColor: 'black', color: 'white', borderRadius: '5px', padding: '5px' }} />
+                  <Legend />
+                  <Line type="monotone" dataKey="totalSpending" stroke="#3b82f6" name="Total Spending" />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
 
             {/* Overall Category Breakdown */}
@@ -550,19 +536,42 @@ export default function AnalyticsPage() {
                 Overall Category Breakdown
               </h2>
               <div className="flex flex-col md:flex-row items-center justify-center">
-                <VictoryPie
-                  data={aggregateAnalytics.overallCategoryBreakdown.map((c: CategorySpending) => ({
-                    x: c.category,
-                    y: c.amount,
-                    label: `${c.category}\nRs ${c.amount.toFixed(0)}`,
-                  }))}
-                  colorScale={aggregateAnalytics.overallCategoryBreakdown.map((c: CategorySpending) => c.color || '#6b7280')}
-                  labelRadius={100}
-                  style={{ labels: { fill: '#fff', fontSize: 14, fontWeight: 'bold' } }}
-                  width={500}
-                  height={500}
-                  padding={{ top: 50, bottom: 50, left: 50, right: 50 }}
-                />
+                <ResponsiveContainer width="100%" height={400}>
+                  <PieChart>
+                    <Pie
+                      data={aggregateAnalytics.overallCategoryBreakdown}
+                      dataKey="amount"
+                      nameKey="category"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={150}
+                      fill="#8884d8"
+                      labelLine={false}
+                      label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
+                        const RADIAN = Math.PI / 180;
+                        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                        return (
+                          <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+                            {`${(percent * 100).toFixed(0)}%`}
+                          </text>
+                        );
+                      }}
+                    >
+                      {aggregateAnalytics.overallCategoryBreakdown.map((entry: CategorySpending, index: number) => (
+                        <Cell key={`cell-${index}`} fill={entry.color || '#6b7280'} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: number) => formatCurrency(value)}
+                      contentStyle={{ backgroundColor: '#333', border: '1px solid #555', borderRadius: '5px' }}
+                      labelStyle={{ color: '#fff' }}
+                      itemStyle={{ color: '#fff' }}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
                 <div className="mt-4 md:mt-0 md:ml-8">
                   {aggregateAnalytics.overallCategoryBreakdown.map((cat: CategorySpending) => (
                     <div key={cat.category} className="flex items-center gap-3 mb-3">
@@ -597,34 +606,20 @@ export default function AnalyticsPage() {
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
                 Top Merchants (All Time)
               </h2>
-              <VictoryChart
-                horizontal
-                theme={VictoryTheme.material}
-                height={500}
-                padding={{ left: 250, top: 50, right: 100, bottom: 50 }}
-              >
-                <VictoryAxis
-                  style={{
-                    tickLabels: { fontSize: 12 },
-                  }}
-                />
-                <VictoryAxis
-                  dependentAxis
-                  tickFormat={(x) => `Rs ${x}`}
-                  style={{
-                    tickLabels: { fontSize: 12 },
-                  }}
-                />
-                <VictoryBar
-                  data={aggregateAnalytics.topMerchantsAllTime.map((m: MerchantSpending) => ({
-                    x: m.merchant.substring(0, 35),
-                    y: m.amount,
-                  }))}
-                  style={{ data: { fill: '#3b82f6' } }}
-                  labelComponent={<VictoryTooltip />}
-                  labels={({ datum }) => `Rs ${datum.y.toFixed(0)}`}
-                />
-              </VictoryChart>
+              <ResponsiveContainer width="100%" height={500}>
+                <BarChart data={aggregateAnalytics.topMerchantsAllTime}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="merchant" angle={-45} textAnchor="end" height={220} />
+                  <YAxis tickFormatter={(value) => formatCurrency(value)} width={150} />
+                  <Tooltip
+                    formatter={(value: number) => formatCurrency(value)}
+                    contentStyle={{ backgroundColor: '#333', border: '1px solid #555', borderRadius: '5px' }}
+                    labelStyle={{ color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
+                  <Bar dataKey="amount" fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </>
         ) : viewMode === 'analysis' && analysisStats ? (
@@ -751,42 +746,19 @@ export default function AnalyticsPage() {
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
                   Analysis Time Trend (Last 30 Days)
                 </h3>
-                <div className="h-96 flex items-center justify-center">
-                  <VictoryChart
-                    theme={VictoryTheme.material}
-                    height={350}
-                    padding={{ left: 80, top: 50, right: 50, bottom: 80 }}
-                  >
-                    <VictoryAxis
-                      tickFormat={(t) => {
-                        const date = new Date(t);
-                        return `${date.getMonth() + 1}/${date.getDate()}`;
-                      }}
-                      style={{
-                        tickLabels: { fontSize: 12, angle: -45, textAnchor: 'end' },
-                      }}
+                <ResponsiveContainer width="100%" height={350}>
+                  <LineChart data={analysisStats.trendData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(date) => new Date(date).toLocaleDateString()}
                     />
-                    <VictoryAxis
-                      dependentAxis
-                      tickFormat={(y) => `${(y / 1000).toFixed(1)}s`}
-                      style={{
-                        tickLabels: { fontSize: 12 },
-                      }}
-                      label="Processing Time"
-                    />
-                    <VictoryLine
-                      data={analysisStats.trendData.map((d: any) => ({
-                        x: d.date,
-                        y: d.averageTime,
-                      }))}
-                      style={{
-                        data: { stroke: '#3b82f6', strokeWidth: 3 },
-                      }}
-                      labelComponent={<VictoryTooltip />}
-                      labels={({ datum }) => `${formatAnalysisTime(datum.y)}`}
-                    />
-                  </VictoryChart>
-                </div>
+                    <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(1)}s`} />
+                    <Tooltip formatter={(value: number) => formatAnalysisTime(value)} contentStyle={{ backgroundColor: 'black', color: 'white', borderRadius: '5px', padding: '5px' }} />
+                    <Legend />
+                    <Line type="monotone" dataKey="averageTime" stroke="#3b82f6" name="Average Time" />
+                  </LineChart>
+                </ResponsiveContainer>
                 <p className="text-sm text-gray-600 dark:text-gray-400 text-center mt-4">
                   Shows average analysis time per day
                 </p>
@@ -813,8 +785,8 @@ export default function AnalyticsPage() {
                 {viewMode === 'single'
                   ? 'Please select a statement to view analytics'
                   : viewMode === 'analysis'
-                  ? 'No analysis statistics available yet. Analyze some statements to see statistics.'
-                  : 'No analyzed statements found'}
+                    ? 'No analysis statistics available yet. Analyze some statements to see statistics.'
+                    : 'No analyzed statements found'}
               </p>
             </div>
           </div>

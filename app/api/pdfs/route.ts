@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       .skip(skip)
       .limit(limit)
       .select(
-        '_id filename originalFilename pageCount extractedPages unlockStatus fileSize createdAt'
+        '_id filename originalFilename pageCount extractedPages unlockStatus documentType fileSize createdAt'
       )
       .lean();
 
@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
         pageCount: pdf.pageCount,
         extractedPages: pdf.extractedPages,
         unlockStatus: pdf.unlockStatus,
+        documentType: pdf.documentType,
         fileSize: pdf.fileSize,
         createdAt: pdf.createdAt,
       })),

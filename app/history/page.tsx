@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
+import { formatCurrency } from '@/lib/formatters';
 
 interface PdfDocument {
   id: string;
@@ -14,6 +15,9 @@ interface PdfDocument {
   documentType?: string;
   fileSize: number;
   createdAt: string;
+  dueDate?: string | null;
+  statementDate?: string | null;
+  newBalance?: number | null;
 }
 
 export default function HistoryPage() {
@@ -23,15 +27,19 @@ export default function HistoryPage() {
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [sortBy, setSortBy] = useState<'createdAt' | 'dueDate'>('dueDate');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     fetchPdfs();
-  }, [page]);
+  }, [page, sortBy, sortOrder]);
 
   const fetchPdfs = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/pdfs?page=${page}&limit=10`);
+      const response = await fetch(
+        `/api/pdfs/with-statements?page=${page}&limit=10&sortBy=${sortBy}&sortOrder=${sortOrder}`
+      );
       const data = await response.json();
 
       if (!response.ok) {
@@ -45,6 +53,18 @@ export default function HistoryPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSortChange = (newSortBy: 'createdAt' | 'dueDate') => {
+    if (newSortBy === sortBy) {
+      // Toggle sort order if clicking same column
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New column, default to descending
+      setSortBy(newSortBy);
+      setSortOrder('desc');
+    }
+    setPage(1); // Reset to first page when sorting changes
   };
 
   const formatDate = (dateString: string) => {
@@ -110,6 +130,48 @@ export default function HistoryPage() {
           )}
         </div>
 
+        {/* Sorting Controls */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 mb-4">
+          <div className="flex items-center gap-4">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Sort by:
+            </label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleSortChange('createdAt')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'createdAt'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+              >
+                Upload Date
+                {sortBy === 'createdAt' && (
+                  <span className="ml-1">
+                    {sortOrder === 'asc' ? '↑' : '↓'}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => handleSortChange('dueDate')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'dueDate'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+              >
+                Statement Date
+                {sortBy === 'dueDate' && (
+                  <span className="ml-1">
+                    {sortOrder === 'asc' ? '↑' : '↓'}
+                  </span>
+                )}
+              </button>
+            </div>
+            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+              {sortBy === 'dueDate' && '(Statements only)'}
+            </span>
+          </div>
+        </div>
+
         {/* Content */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8">
           {loading ? (
@@ -143,7 +205,10 @@ export default function HistoryPage() {
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Filename
+                        Statement Date
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        Bill amount
                       </th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
                         Pages
@@ -158,7 +223,7 @@ export default function HistoryPage() {
                         Analysis
                       </th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Date
+                        Upload Date
                       </th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
                         Actions
@@ -169,35 +234,32 @@ export default function HistoryPage() {
                     {pdfs.map((pdf) => (
                       <tr
                         key={pdf.id}
-                        className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
-                          pdf.documentType === 'statement'
-                            ? 'bg-blue-50/30 dark:bg-blue-900/10 border-l-4 border-l-blue-500'
-                            : ''
-                        }`}
+                        className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${pdf.documentType === 'statement'
+                          ? 'bg-blue-50/30 dark:bg-blue-900/10 border-l-4 border-l-blue-500'
+                          : ''
+                          }`}
                       >
-                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100">
-                          <div className="flex items-center gap-2">
-                            {pdf.originalFilename}
-                            {pdf.documentType === 'statement' && (
-                              <span
-                                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full"
-                                title="AI Analysis Completed"
-                              >
-                                <svg
-                                  className="w-3 h-3"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                                AI
-                              </span>
-                            )}
-                          </div>
+                        <td className="py-3 px-4 text-sm">
+                          {pdf.statementDate ? (
+                            <span className="font-semibold">
+                              {pdf.statementDate}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 dark:text-gray-600">
+                              —
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-sm">
+                          {pdf.newBalance ? (
+                            <span className="font-semibold">
+                              {formatCurrency(pdf.newBalance)}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 dark:text-gray-600">
+                              —
+                            </span>
+                          )}
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                           {pdf.pageCount} ({pdf.extractedPages} extracted)
@@ -207,11 +269,10 @@ export default function HistoryPage() {
                         </td>
                         <td className="py-3 px-4">
                           <span
-                            className={`inline-block px-2 py-1 text-xs rounded-full ${
-                              pdf.unlockStatus === 'success'
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                            }`}
+                            className={`inline-block px-2 py-1 text-xs rounded-full ${pdf.unlockStatus === 'success'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                              }`}
                           >
                             {pdf.unlockStatus}
                           </span>

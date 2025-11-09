@@ -22,6 +22,8 @@ export interface DailySpending {
 export interface MonthlyData {
   month: string;
   year: number;
+  dueDate: string;
+  timestamp: number;
   totalSpending: number;
   totalCredits: number;
   categoryBreakdown: CategorySpending[];

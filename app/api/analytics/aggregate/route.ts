@@ -32,9 +32,9 @@ export async function GET(request: NextRequest) {
     // Connect to database
     await connectDB();
 
-    // Get all user's statements
+    // Get all user's statements sorted by due date ascending (earliest first)
     const statements = await Statement.find({ userId })
-      .sort({ createdAt: -1 })
+      .sort({ 'summary.dueDate': 1 })
       .lean();
 
     if (statements.length === 0) {
@@ -64,12 +64,13 @@ export async function GET(request: NextRequest) {
       totalTransactions += statement.transactions.length;
       allTransactions.push(...statement.transactions);
 
-      const { month, year } = parseStatementMonth(statement.summary.statementDate);
+      const { month, year, timestamp } = parseStatementMonth(statement.summary.statementDate);
       const categoryBreakdown = calculateCategoryBreakdown(statement.transactions);
 
       monthlyData.push({
         month,
         year,
+        timestamp,
         totalSpending: monthSpending,
         totalCredits: monthCredits,
         categoryBreakdown,
@@ -77,14 +78,17 @@ export async function GET(request: NextRequest) {
           (statement.summary.newBalance / statement.summary.creditLimit) * 100,
         newBalance: statement.summary.newBalance,
         minimumPayment: statement.summary.minimumPayment,
+        dueDate: statement.summary.dueDate,
       });
     });
+
+    monthlyData.sort((a, b) => a.timestamp - b.timestamp);
 
     // Calculate overall category breakdown
     const overallCategoryBreakdown = calculateCategoryBreakdown(allTransactions);
 
     // Get top merchants all time
-    const topMerchantsAllTime = calculateTopMerchants(allTransactions, 10);
+    const topMerchantsAllTime = calculateTopMerchants(allTransactions, 20);
 
     // Find most used category
     const mostUsedCategory = overallCategoryBreakdown[0]?.category || 'Unknown';

@@ -5,6 +5,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AnalysisProgress from '@/components/AnalysisProgress';
+import { formatCurrency } from '@/lib/formatters';
 import { formatAnalysisTime } from '@/lib/analysisStats';
 
 interface PdfDetail {
@@ -189,18 +190,7 @@ export default function PdfDetailPage({ params }: { params: { id: string } }) {
     return `${seconds}s`;
   };
 
-  const formatCurrency = (amount: number) => {
-    if (typeof amount !== 'number') {
-      return '';
-    }
 
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: '/login' });
@@ -549,7 +539,7 @@ export default function PdfDetailPage({ params }: { params: { id: string } }) {
                           </div>
                           <div>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                              New Balance
+                              Bill amount
                             </p>
                             <p className="text-lg text-red-600 dark:text-red-400 font-bold">
                               {formatCurrency(statement.summary.newBalance)}
