@@ -1,9 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect, DragEvent, ChangeEvent, FormEvent } from 'react';
-import { useSession, signOut } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 interface PreviewData {
   text: string;
@@ -14,8 +11,6 @@ interface PreviewData {
 }
 
 export default function Home() {
-  const { data: session } = useSession();
-  const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,11 +28,7 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (session) {
-      fetchSavedPasswords();
-    }
-  }, [session]);
+
 
   const fetchSavedPasswords = async () => {
     try {
@@ -95,10 +86,6 @@ export default function Home() {
     } catch (err) {
       console.error('Error saving password:', err);
     }
-  };
-
-  const handleLogout = async () => {
-    await signOut({ callbackUrl: '/login' });
   };
 
   const handleCopyText = async () => {
@@ -288,8 +275,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        {/* Header with user info and navigation */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="mb-8">
           <div className="text-center flex-1">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
               PDF Assist
@@ -298,45 +284,6 @@ export default function Home() {
               Securely unlock password-protected PDF files
             </p>
           </div>
-          
-          {session && (
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Welcome,
-                </p>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {session.user.name}
-                </p>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Link
-                  href="/history"
-                  className="px-4 py-2 text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600"
-                >
-                  View History
-                </Link>
-                <Link
-                  href="/analytics"
-                  className="px-4 py-2 text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600"
-                >
-                  Analytics
-                </Link>
-                <Link
-                  href="/passwords"
-                  className="px-4 py-2 text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600"
-                >
-                  Passwords
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                >
-                  Logout
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Upload Form */}

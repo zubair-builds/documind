@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AnalysisProgress from '@/components/AnalysisProgress';
@@ -57,7 +56,6 @@ interface StatementData {
 }
 
 export default function PdfDetailPage({ params }: { params: { id: string } }) {
-  const { data: session } = useSession();
   const router = useRouter();
   const [pdf, setPdf] = useState<PdfDetail | null>(null);
   const [statement, setStatement] = useState<StatementData | null>(null);
@@ -190,17 +188,11 @@ export default function PdfDetailPage({ params }: { params: { id: string } }) {
     return `${seconds}s`;
   };
 
-
-
-  const handleLogout = async () => {
-    await signOut({ callbackUrl: '/login' });
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="mb-8">
           <div>
             <Link
               href="/history"
@@ -212,42 +204,6 @@ export default function PdfDetailPage({ params }: { params: { id: string } }) {
               PDF Details
             </h1>
           </div>
-
-          {session && (
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {session.user.name}
-                </p>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Link
-                  href="/"
-                  className="px-4 py-2 text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600"
-                >
-                  Upload PDF
-                </Link>
-                <Link
-                  href="/analytics"
-                  className="px-4 py-2 text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600"
-                >
-                  Analytics
-                </Link>
-                <Link
-                  href="/passwords"
-                  className="px-4 py-2 text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600"
-                >
-                  Passwords
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                >
-                  Logout
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Content */}
