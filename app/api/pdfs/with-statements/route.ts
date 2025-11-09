@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '10', 10);
-    const sortBy = searchParams.get('sortBy') || 'createdAt'; // createdAt or dueDate
+    const sortBy = searchParams.get('sortBy') || 'statementDate';
     const sortOrder = searchParams.get('sortOrder') || 'desc'; // asc or desc
     const skip = (page - 1) * limit;
 
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     const statements = await Statement.find({
       pdfId: { $in: pdfIds },
     })
-      .select('pdfId summary.dueDate summary.statementDate summary.newBalance')
+      .select('pdfId summary.statementDate summary.newBalance analysisMetadata.processingTime')
       .lean();
 
     // Create a map of pdfId to statement
@@ -62,7 +62,6 @@ export async function GET(request: NextRequest) {
     // Merge PDFs with statement data
     const pdfsWithStatements = pdfs.map((pdf) => {
       const statement = statementMap.get(pdf._id.toString());
-      console.log('statement', statement);
       
       return {
         id: pdf._id.toString(),
@@ -74,63 +73,34 @@ export async function GET(request: NextRequest) {
         documentType: pdf.documentType,
         fileSize: pdf.fileSize,
         createdAt: pdf.createdAt,
-        dueDate: statement?.summary?.dueDate || null,
         newBalance : statement?.summary?.newBalance || null,
         statementDate: statement?.summary?.statementDate || null,
+        analysisTime: statement?.analysisMetadata?.processingTime || null,
       };
     });
 
     // Sort the results
-    if (sortBy === 'dueDate') {
-      pdfsWithStatements.sort((a, b) => {
-        // Put PDFs without due dates at the end
-        if (!a.dueDate && !b.dueDate) return 0;
-        if (!a.dueDate) return 1;
-        if (!b.dueDate) return -1;
+    pdfsWithStatements.sort((a, b) => {
+      const aVal = a[sortBy as keyof typeof a];
+      const bVal = b[sortBy as keyof typeof b];
 
-        // Parse dates - assuming format like "15 JUL 2024" or similar
-        const parseDate = (dateStr: string) => {
-          try {
-            // Try parsing different date formats
-            const date = new Date(dateStr);
-            if (!isNaN(date.getTime())) return date;
-            
-            // If direct parsing fails, try manual parsing for formats like "15 JUL"
-            const parts = dateStr.trim().split(' ');
-            if (parts.length >= 2) {
-              const months: { [key: string]: number } = {
-                JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
-                JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11,
-              };
-              const day = parseInt(parts[0]);
-              const month = months[parts[1].toUpperCase()];
-              const year = parts[2] ? parseInt(parts[2]) : new Date().getFullYear();
-              
-              if (!isNaN(day) && month !== undefined) {
-                return new Date(year, month, day);
-              }
-            }
-            return new Date(0); // Return epoch if parsing fails
-          } catch {
-            return new Date(0);
-          }
-        };
+      // Handle null/undefined values by pushing them to the end
+      if (aVal === null || aVal === undefined) return 1;
+      if (bVal === null || bVal === undefined) return -1;
 
-        const dateA = parseDate(a.dueDate);
-        const dateB = parseDate(b.dueDate);
+      let comparison = 0;
+      if (sortBy === 'createdAt' || sortBy === 'statementDate') {
+        const dateA = new Date(aVal as string).getTime();
+        const dateB = new Date(bVal as string).getTime();
+        comparison = dateA - dateB;
+      } else if (typeof aVal === 'number' && typeof bVal === 'number') {
+        comparison = aVal - bVal;
+      } else if (typeof aVal === 'string' && typeof bVal === 'string') {
+        comparison = aVal.localeCompare(bVal);
+      }
 
-        return sortOrder === 'asc'
-          ? dateA.getTime() - dateB.getTime()
-          : dateB.getTime() - dateA.getTime();
-      });
-    } else {
-      // Sort by createdAt
-      pdfsWithStatements.sort((a, b) => {
-        const dateA = new Date(a.createdAt).getTime();
-        const dateB = new Date(b.createdAt).getTime();
-        return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
-      });
-    }
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
 
     // Apply pagination after sorting
     const paginatedPdfs = pdfsWithStatements.slice(skip, skip + limit);

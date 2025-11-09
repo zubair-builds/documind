@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { formatCurrency } from '@/lib/formatters';
+import { formatAnalysisTime } from '@/lib/analysisStats';
+import { useRouter } from 'next/navigation';
 
 interface PdfDocument {
   id: string;
@@ -15,9 +17,9 @@ interface PdfDocument {
   documentType?: string;
   fileSize: number;
   createdAt: string;
-  dueDate?: string | null;
   statementDate?: string | null;
   newBalance?: number | null;
+  analysisTime?: number | null;
 }
 
 export default function HistoryPage() {
@@ -27,8 +29,14 @@ export default function HistoryPage() {
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [sortBy, setSortBy] = useState<'createdAt' | 'dueDate'>('dueDate');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortBy, setSortBy] = useState<
+    'createdAt'
+    | 'newBalance'
+    | 'fileSize'
+    | 'analysisTime'
+    | 'statementDate'
+  >('statementDate');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     fetchPdfs();
@@ -55,15 +63,15 @@ export default function HistoryPage() {
     }
   };
 
-  const handleSortChange = (newSortBy: 'createdAt' | 'dueDate') => {
-    if (newSortBy === sortBy) {
-      // Toggle sort order if clicking same column
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      // New column, default to descending
-      setSortBy(newSortBy);
-      setSortOrder('desc');
-    }
+  const handleSortChange = (
+    newSortBy:
+      | 'createdAt'
+      | 'newBalance'
+      | 'fileSize'
+      | 'analysisTime'
+      | 'statementDate'
+  ) => {
+    setSortBy(newSortBy);
     setPage(1); // Reset to first page when sorting changes
   };
 
@@ -77,6 +85,11 @@ export default function HistoryPage() {
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: '/login' });
+  };
+
+  const router = useRouter();
+  const handleRowClick = (pdfId: string) => {
+    router.push(`/history/${pdfId}`);
   };
 
   return (
@@ -130,48 +143,6 @@ export default function HistoryPage() {
           )}
         </div>
 
-        {/* Sorting Controls */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 mb-4">
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Sort by:
-            </label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleSortChange('createdAt')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'createdAt'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-              >
-                Upload Date
-                {sortBy === 'createdAt' && (
-                  <span className="ml-1">
-                    {sortOrder === 'asc' ? '↑' : '↓'}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => handleSortChange('dueDate')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'dueDate'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-              >
-                Statement Date
-                {sortBy === 'dueDate' && (
-                  <span className="ml-1">
-                    {sortOrder === 'asc' ? '↑' : '↓'}
-                  </span>
-                )}
-              </button>
-            </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-              {sortBy === 'dueDate' && '(Statements only)'}
-            </span>
-          </div>
-        </div>
-
         {/* Content */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8">
           {loading ? (
@@ -199,6 +170,42 @@ export default function HistoryPage() {
             </div>
           ) : (
             <>
+              {/* Sort Options */}
+              <div className="flex justify-end items-center mb-4">
+                <label
+                  htmlFor="sort-by"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300 mr-2"
+                >
+                  Sort by:
+                </label>
+                <select
+                  id="sort-by"
+                  value={sortBy}
+                  onChange={(e) =>
+                    handleSortChange(
+                      e.target.value as
+                        | 'createdAt'
+                        | 'newBalance'
+                        | 'fileSize'
+                        | 'analysisTime'
+                        | 'statementDate'
+                    )
+                  }
+                  className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="statementDate">Statement Date</option>
+                  <option value="newBalance">Bill Amount</option>
+                  <option value="fileSize">File Size</option>
+                  <option value="analysisTime">Analysis Time</option>
+                  <option value="createdAt">Upload Date</option>
+                </select>
+                <button
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="ml-2 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600"
+                >
+                  {sortOrder === 'asc' ? '↑' : '↓'}
+                </button>
+              </div>
               {/* Table */}
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -211,22 +218,13 @@ export default function HistoryPage() {
                         Bill amount
                       </th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Pages
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
                         Size
                       </th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Status
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Analysis
+                        Analysis Time
                       </th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
                         Upload Date
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Actions
                       </th>
                     </tr>
                   </thead>
@@ -234,15 +232,16 @@ export default function HistoryPage() {
                     {pdfs.map((pdf) => (
                       <tr
                         key={pdf.id}
-                        className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${pdf.documentType === 'statement'
-                          ? 'bg-blue-50/30 dark:bg-blue-900/10 border-l-4 border-l-blue-500'
-                          : ''
+                        onClick={() => handleRowClick(pdf.id)}
+                        className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer ${pdf.documentType === 'statement'
+                            ? 'bg-blue-50/30 dark:bg-blue-900/10 border-l-4 border-l-blue-500'
+                            : ''
                           }`}
                       >
                         <td className="py-3 px-4 text-sm">
                           {pdf.statementDate ? (
                             <span className="font-semibold">
-                              {pdf.statementDate}
+                              {new Date(pdf.statementDate).toLocaleString('default', { month: 'short', year: 'numeric' })}
                             </span>
                           ) : (
                             <span className="text-gray-400 dark:text-gray-600">
@@ -262,55 +261,21 @@ export default function HistoryPage() {
                           )}
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                          {pdf.pageCount} ({pdf.extractedPages} extracted)
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                           {formatFileSize(pdf.fileSize)}
                         </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-block px-2 py-1 text-xs rounded-full ${pdf.unlockStatus === 'success'
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                              }`}
-                          >
-                            {pdf.unlockStatus}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          {pdf.documentType === 'statement' ? (
-                            <span className="inline-flex items-center gap-1 text-xs text-green-700 dark:text-green-400 font-medium">
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                              Analyzed
+                        <td className="py-3 px-4 text-sm">
+                          {pdf.analysisTime ? (
+                            <span className="font-semibold">
+                              {formatAnalysisTime(pdf.analysisTime)}
                             </span>
                           ) : (
-                            <span className="text-xs text-gray-400 dark:text-gray-600">
-                              Not analyzed
+                            <span className="text-gray-400 dark:text-gray-600">
+                              —
                             </span>
                           )}
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                           {formatDate(pdf.createdAt)}
-                        </td>
-                        <td className="py-3 px-4">
-                          <Link
-                            href={`/history/${pdf.id}`}
-                            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
-                          >
-                            View Details
-                          </Link>
                         </td>
                       </tr>
                     ))}
