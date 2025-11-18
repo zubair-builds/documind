@@ -66,6 +66,14 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || (() => {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'NEXTAUTH_SECRET environment variable is required in production. ' +
+        'Generate one using: openssl rand -base64 32'
+      );
+    }
+    return 'development-secret-change-in-production';
+  })(),
 };
 
