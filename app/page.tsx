@@ -28,7 +28,18 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Fetch saved passwords on component mount
+  useEffect(() => {
+    fetchSavedPasswords();
+  }, []);
 
+  // Fetch passwords when a file is selected (in case user logged in after page load)
+  useEffect(() => {
+    if (file && savedPasswords.length === 0) {
+      fetchSavedPasswords();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file]);
 
   const fetchSavedPasswords = async () => {
     try {
@@ -125,11 +136,15 @@ export default function Home() {
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       const droppedFile = files[0];
-      if (droppedFile.type === 'application/pdf') {
+      const isValidFile = droppedFile.type === 'application/pdf' || 
+                         droppedFile.type === 'text/csv' ||
+                         droppedFile.name.endsWith('.pdf') ||
+                         droppedFile.name.endsWith('.csv');
+      if (isValidFile) {
         setFile(droppedFile);
         setError('');
       } else {
-        setError('Please upload a PDF file');
+        setError('Please upload a PDF or CSV file');
       }
     }
   };
@@ -138,11 +153,15 @@ export default function Home() {
     const files = e.target.files;
     if (files && files.length > 0) {
       const selectedFile = files[0];
-      if (selectedFile.type === 'application/pdf') {
+      const isValidFile = selectedFile.type === 'application/pdf' || 
+                         selectedFile.type === 'text/csv' ||
+                         selectedFile.name.endsWith('.pdf') ||
+                         selectedFile.name.endsWith('.csv');
+      if (isValidFile) {
         setFile(selectedFile);
         setError('');
       } else {
-        setError('Please upload a PDF file');
+        setError('Please upload a PDF or CSV file');
       }
     }
   };
@@ -151,7 +170,7 @@ export default function Home() {
     e.preventDefault();
 
     if (!file) {
-      setError('Please select a PDF file');
+      setError('Please select a PDF or CSV file');
       return;
     }
 
@@ -292,7 +311,7 @@ export default function Home() {
             {/* File Drop Zone */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                Select PDF File
+                Select PDF or CSV File
               </label>
               <div
                 onDragEnter={handleDragEnter}
@@ -309,7 +328,7 @@ export default function Home() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="application/pdf,.pdf"
+                  accept="application/pdf,.pdf,text/csv,.csv"
                   onChange={handleFileSelect}
                   className="hidden"
                   disabled={loading || !!previewData}
@@ -346,15 +365,15 @@ export default function Home() {
                       drag and drop
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      PDF files only (max 10MB)
+                      PDF or CSV files (max 10MB)
                     </p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Saved Password Dropdown */}
-            {savedPasswords.length > 0 && !previewData && (
+            {/* Saved Password Dropdown - Show when there are saved passwords */}
+            {!previewData && (
               <div>
                 <label
                   htmlFor="savedPassword"
@@ -367,14 +386,20 @@ export default function Home() {
                   value={selectedPasswordId}
                   onChange={(e) => handlePasswordSelect(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  disabled={loading}
+                  disabled={loading || savedPasswords.length === 0}
                 >
                   <option value="">-- Select Saved Password --</option>
-                  {savedPasswords.map((pwd) => (
-                    <option key={pwd.id} value={pwd.id}>
-                      {pwd.label}
+                  {savedPasswords.length > 0 ? (
+                    savedPasswords.map((pwd) => (
+                      <option key={pwd.id} value={pwd.id}>
+                        {pwd.label}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="" disabled>
+                      No saved passwords available
                     </option>
-                  ))}
+                  )}
                 </select>
               </div>
             )}
@@ -385,7 +410,7 @@ export default function Home() {
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2"
               >
-                PDF Password
+                File Password
               </label>
               <input
                 type="password"
@@ -393,7 +418,7 @@ export default function Home() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                placeholder="Enter PDF password"
+                placeholder="Enter file password"
                 disabled={loading || !!previewData}
               />
             </div>
