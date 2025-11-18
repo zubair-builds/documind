@@ -5,8 +5,18 @@ import { randomUUID } from 'crypto';
 
 /**
  * Get the temporary directory path from environment or use default
+ * In serverless environments (like Vercel), use /tmp as it's the only writable directory
  */
 export function getTempDir(): string {
+  // Check if we're in a serverless environment (Vercel, AWS Lambda, etc.)
+  const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NEXT_RUNTIME === 'nodejs';
+  
+  if (isServerless) {
+    // In serverless, /tmp is the only writable directory
+    return '/tmp';
+  }
+  
+  // In local development or traditional servers, use configured or default temp dir
   const tempDir = process.env.TEMP_DIR || './temp';
   return path.resolve(process.cwd(), tempDir);
 }
