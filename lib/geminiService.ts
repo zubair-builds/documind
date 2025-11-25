@@ -1,13 +1,18 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { StatementData } from '@/types';
 
-const API_KEY = process.env.GEMINI_API_KEY;
-
-if (!API_KEY) {
-    throw new Error("GEMINI_API_KEY environment variable not set");
-}
-
-const genAI = new GoogleGenerativeAI(API_KEY);
+const getApiKey = (): string => {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        if (process.env.NODE_ENV === 'production') {
+            throw new Error("GEMINI_API_KEY environment variable not set");
+        }
+        console.warn('[WARN] GEMINI_API_KEY is missing. Set it in Railway environment variables for production.');
+        // Development fallback - will fail if actually called, but allows build to complete
+        return 'development-key-not-for-use';
+    }
+    return apiKey;
+};
 
 const statementSchema = {
     type: SchemaType.OBJECT,
@@ -46,6 +51,7 @@ const statementSchema = {
 
 export const parseStatement = async (statementText: string): Promise<StatementData> => {
     try {
+        const genAI = new GoogleGenerativeAI(getApiKey());
         const model = genAI.getGenerativeModel({
             model: 'gemini-2.5-flash',
             generationConfig: {
