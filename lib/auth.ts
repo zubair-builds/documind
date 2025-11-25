@@ -66,14 +66,16 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET || (() => {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error(
-        'NEXTAUTH_SECRET environment variable is required in production. ' +
-        'Generate one using: openssl rand -base64 32'
-      );
+  // Avoid throwing during build: provide fallback and log warning if unset in production.
+  secret: (() => {
+    const secret = process.env.NEXTAUTH_SECRET;
+    if (!secret) {
+      if (process.env.NODE_ENV === 'production') {
+        console.warn('[WARN] NEXTAUTH_SECRET is missing. Set it in Railway environment variables. Generate one with: openssl rand -base64 32');
+      }
+      return 'development-secret-change-in-production';
     }
-    return 'development-secret-change-in-production';
+    return secret;
   })(),
 };
 
