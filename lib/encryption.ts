@@ -3,22 +3,29 @@ import CryptoJS from 'crypto-js';
 const getEncryptionKey = (): string => {
   const key = process.env.ENCRYPTION_KEY;
   if (!key) {
-    throw new Error('ENCRYPTION_KEY environment variable is not set');
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('ENCRYPTION_KEY environment variable is not set');
+    }
+    console.warn('[WARN] ENCRYPTION_KEY is missing. Using development fallback key. Set ENCRYPTION_KEY in Railway environment variables for production.');
+    // Development fallback (32 chars) to avoid build-time failures
+    return 'development-encryption-key-32-bytes!!';
   }
   if (key.length < 32) {
-    throw new Error('ENCRYPTION_KEY must be at least 32 characters long');
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('ENCRYPTION_KEY must be at least 32 characters long');
+    }
+    console.warn('[WARN] ENCRYPTION_KEY is shorter than 32 characters. Using provided key in development.');
   }
   return key;
 };
-
-const ENCRYPTION_KEY = getEncryptionKey();
 
 /**
  * Encrypt a password using AES-256
  */
 export function encryptPassword(password: string): string {
   try {
-    const encrypted = CryptoJS.AES.encrypt(password, ENCRYPTION_KEY).toString();
+    const key = getEncryptionKey();
+    const encrypted = CryptoJS.AES.encrypt(password, key).toString();
     return encrypted;
   } catch (error) {
     console.error('Encryption error:', error);
@@ -31,13 +38,14 @@ export function encryptPassword(password: string): string {
  */
 export function decryptPassword(encryptedPassword: string): string {
   try {
-    const bytes = CryptoJS.AES.decrypt(encryptedPassword, ENCRYPTION_KEY);
+    const key = getEncryptionKey();
+    const bytes = CryptoJS.AES.decrypt(encryptedPassword, key);
     const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-    
+
     if (!decrypted) {
       throw new Error('Decryption produced empty result');
     }
-    
+
     return decrypted;
   } catch (error) {
     console.error('Decryption error:', error);
