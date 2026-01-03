@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
+import { generateToken } from '@/lib/jwt';
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,11 +56,19 @@ export async function POST(request: NextRequest) {
       password: hashedPassword,
     });
 
+    // Generate JWT token
+    const token = generateToken({
+      userId: String(user._id),
+      email: user.email,
+      name: user.name,
+    });
+
     // Return success response (don't send password)
     return NextResponse.json(
       {
         success: true,
         message: 'User registered successfully',
+        token,
         user: {
           id: user._id,
           name: user.name,
