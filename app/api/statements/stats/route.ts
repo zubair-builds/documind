@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import Statement from '@/models/Statement';
 
@@ -12,16 +10,18 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get authenticated user session
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.id) {
+    // Get authenticated user
+    const { getAuthenticatedUser } = await import('@/lib/api-auth');
+    const user = await getAuthenticatedUser(request);
+
+    if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized. Please log in.' },
         { status: 401 }
       );
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
 
     // Connect to database
     await connectDB();
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     const averageTime =
       processingTimes.length > 0
         ? processingTimes.reduce((sum, time) => sum + time, 0) /
-          processingTimes.length
+        processingTimes.length
         : 0;
 
     const fastestTime =

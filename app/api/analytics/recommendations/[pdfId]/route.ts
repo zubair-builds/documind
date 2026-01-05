@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import Statement from '@/models/Statement';
 import {
@@ -19,16 +17,18 @@ export async function GET(
   { params }: { params: { pdfId: string } }
 ) {
   try {
-    // Get authenticated user session
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.id) {
+    // Get authenticated user
+    const { getAuthenticatedUser } = await import('@/lib/api-auth');
+    const user = await getAuthenticatedUser(request);
+
+    if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized. Please log in.' },
         { status: 401 }
       );
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
     const { pdfId } = params;
 
     // Connect to database

@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import Pdf from '@/models/Pdf';
 import Statement from '@/models/Statement';
@@ -13,27 +11,11 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get authenticated user session
-    // Get authenticated user session
-    let session = await getServerSession(authOptions);
-    let user;
+    // Get authenticated user
+    const { getAuthenticatedUser } = await import('@/lib/api-auth');
+    const user = await getAuthenticatedUser(request);
 
-    if (session?.user?.id) {
-      user = session.user;
-    } else {
-      // Fallback: Check for Bearer token
-      const authHeader = request.headers.get('authorization');
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.split(' ')[1];
-        const { verifyToken } = await import('@/lib/jwt');
-        const decoded = verifyToken(token);
-        if (decoded) {
-          user = { id: decoded.userId, email: decoded.email, name: decoded.name };
-        }
-      }
-    }
-
-    if (!user || !user.id) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized. Please log in.' },
         { status: 401 }
