@@ -1,0 +1,121 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import connectDB from '@/lib/mongodb';
+import Pdf from '@/models/Pdf';
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
+import crypto from 'crypto';
+
+export async function POST(request: NextRequest) {
+    try {
+        // Get authenticated user session
+        let session = await getServerSession(authOptions);
+        let user;
+
+        if (session?.user?.id) {
+            user = session.user;
+        } else {
+            // Fallback: Check for Bearer token
+            const authHeader = request.headers.get('authorization');
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.split(' ')[1];
+                const { verifyToken } = await import('@/lib/jwt');
+                const decoded = verifyToken(token);
+                if (decoded) {
+                    user = { id: decoded.userId, email: decoded.email, name: decoded.name };
+                }
+            }
+        }
+
+        if (!user || !user.id) {
+            return NextResponse.json(
+                { error: 'Unauthorized. Please log in.' },
+                { status: 401 }
+            );
+        }
+
+        const userId = user.id;
+
+        // Connect to database
+        await connectDB();
+
+        const formData = await request.formData();
+        const file = formData.get('file') as File;
+
+        if (!file) {
+            return NextResponse.json(
+                { error: 'No file uploaded' },
+                { status: 400 }
+            );
+        }
+
+        // Validate file type
+        if (file.type !== 'application/pdf') {
+            return NextResponse.json(
+                { error: 'Invalid file type. Only PDFs are allowed.' },
+                { status: 400 }
+            );
+        }
+
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const originalFilename = file.name;
+        const fileSize = file.size;
+
+        // Generate unique filename
+        // Use hash of content + timestamp to ensure uniqueness and verifiable content
+        const hash = crypto.createHash('sha256').update(buffer).digest('hex');
+        const filename = `${hash}.pdf`;
+
+        // Ensure uploads directory exists
+        // In production (Railway), we might need ephemeral storage or cloud storage (S3).
+        // For this MVP, local filesystem in 'uploads' or 'temp' dir is fine, 
+        // but note that filesystem is not persistent on some serverless platforms.
+        // We'll use a 'data/uploads' directory or similar relative to project root.
+
+        const uploadDir = path.join(process.cwd(), 'data', 'uploads');
+        try {
+            await mkdir(uploadDir, { recursive: true });
+        } catch (err) {
+            // Ignore if exists
+        }
+
+        const filepath = path.join(uploadDir, filename);
+        await writeFile(filepath, buffer);
+
+        // Create PDF record in database
+        const pdf = await Pdf.create({
+            userId,
+            filename, // stored filename
+            originalFilename,
+            fileSize,
+            path: filepath,
+            uploadStatus: 'uploaded',
+            // We start with locked status until we check it
+            unlockStatus: 'locked',
+        });
+
+        // Limit initial processing: just save it. 
+        // A separate background job or immediate trigger could process it.
+        // For now, let's just return success.
+
+        return NextResponse.json({
+            success: true,
+            message: 'File uploaded successfully',
+            pdf: {
+                id: pdf._id,
+                filename: pdf.filename,
+                originalFilename: pdf.originalFilename,
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Error uploading PDF:', error);
+        return NextResponse.json(
+            {
+                error: error?.message || 'Failed to upload file',
+            },
+            { status: 500 }
+        );
+    }
+}
