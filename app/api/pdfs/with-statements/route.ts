@@ -14,15 +14,33 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     // Get authenticated user session
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.id) {
+    // Get authenticated user session
+    let session = await getServerSession(authOptions);
+    let user;
+
+    if (session?.user?.id) {
+      user = session.user;
+    } else {
+      // Fallback: Check for Bearer token
+      const authHeader = request.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        const { verifyToken } = await import('@/lib/jwt');
+        const decoded = verifyToken(token);
+        if (decoded) {
+          user = { id: decoded.userId, email: decoded.email, name: decoded.name };
+        }
+      }
+    }
+
+    if (!user || !user.id) {
       return NextResponse.json(
         { error: 'Unauthorized. Please log in.' },
         { status: 401 }
       );
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
 
     // Connect to database
     await connectDB();
@@ -62,7 +80,7 @@ export async function GET(request: NextRequest) {
     // Merge PDFs with statement data
     const pdfsWithStatements = pdfs.map((pdf) => {
       const statement = statementMap.get(pdf._id.toString());
-      
+
       return {
         id: pdf._id.toString(),
         filename: pdf.filename,
@@ -73,7 +91,7 @@ export async function GET(request: NextRequest) {
         documentType: pdf.documentType,
         fileSize: pdf.fileSize,
         createdAt: pdf.createdAt,
-        newBalance : statement?.summary?.newBalance || null,
+        newBalance: statement?.summary?.newBalance || null,
         statementDate: statement?.summary?.statementDate || null,
         analysisTime: statement?.analysisMetadata?.processingTime || null,
       };
