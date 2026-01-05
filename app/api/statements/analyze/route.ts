@@ -17,15 +17,32 @@ export async function POST(request: NextRequest) {
 
   try {
     // Get authenticated user session
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.id) {
+    let session = await getServerSession(authOptions);
+    let user;
+
+    if (session?.user?.id) {
+      user = session.user;
+    } else {
+      // Fallback: Check for Bearer token
+      const authHeader = request.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        const { verifyToken } = await import('@/lib/jwt');
+        const decoded = verifyToken(token);
+        if (decoded) {
+          user = { id: decoded.userId, email: decoded.email, name: decoded.name };
+        }
+      }
+    }
+
+    if (!user || !user.id) {
       return NextResponse.json(
         { error: 'Unauthorized. Please log in.' },
         { status: 401 }
       );
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
 
     // Parse request body
     const { pdfId } = await request.json();
@@ -92,7 +109,7 @@ export async function POST(request: NextRequest) {
       analysisSuccess = false;
       errorMessage = error?.message || 'Failed to analyze statement';
       console.error('Gemini analysis error:', error);
-      
+
       return NextResponse.json(
         { error: errorMessage },
         { status: 500 }
