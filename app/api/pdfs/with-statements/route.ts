@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     const statements = await Statement.find({
       pdfId: { $in: pdfIds },
     })
-      .select('pdfId summary.statementDate summary.newBalance analysisMetadata.processingTime')
+      .select('pdfId summary.statementDate summary.dueDate summary.newBalance analysisMetadata.processingTime')
       .lean();
 
     // Create a map of pdfId to statement
@@ -75,6 +75,7 @@ export async function GET(request: NextRequest) {
         createdAt: pdf.createdAt,
         newBalance: statement?.summary?.newBalance || null,
         statementDate: statement?.summary?.statementDate || null,
+        dueDate: statement?.summary?.dueDate || null,
         analysisTime: statement?.analysisMetadata?.processingTime || null,
       };
     });
