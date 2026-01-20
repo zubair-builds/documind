@@ -8,7 +8,12 @@ export interface IPdf extends Document {
   pageCount: number;
   extractedText: string;
   extractedPages: number;
-  unlockStatus: 'success' | 'failed';
+  /**
+   * SHA-256 hash of the PDF content, used for duplicate detection.
+   * Optional so older documents without a hash remain valid.
+   */
+  contentHash?: string;
+  unlockStatus: 'success' | 'failed' | 'locked';
   documentType: 'statement' | 'other' | 'unknown';
   encryptedPassword?: string;
   processingMetadata: {
@@ -53,9 +58,14 @@ const PdfSchema: Schema<IPdf> = new Schema(
       type: Number,
       default: 0,
     },
+    contentHash: {
+      type: String,
+      required: false,
+      index: true,
+    },
     unlockStatus: {
       type: String,
-      enum: ['success', 'failed'],
+      enum: ['success', 'failed', 'locked'],
       required: true,
       default: 'success',
     },
@@ -92,6 +102,12 @@ const PdfSchema: Schema<IPdf> = new Schema(
 // Create compound index for efficient queries
 PdfSchema.index({ userId: 1, createdAt: -1 });
 PdfSchema.index({ userId: 1, filename: 1 });
+// Enforce per-user uniqueness for a given content hash.
+// Sparse so existing documents without contentHash don't violate uniqueness.
+PdfSchema.index(
+  { userId: 1, contentHash: 1 },
+  { unique: true, sparse: true }
+);
 
 const Pdf: Model<IPdf> =
   mongoose.models.Pdf || mongoose.model<IPdf>('Pdf', PdfSchema);

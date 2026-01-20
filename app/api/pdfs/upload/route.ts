@@ -45,10 +45,31 @@ export async function POST(request: NextRequest) {
         const originalFilename = file.name;
         const fileSize = file.size;
 
-        // Generate unique filename
-        // Use hash of content + timestamp to ensure uniqueness and verifiable content
-        const hash = crypto.createHash('sha256').update(buffer).digest('hex');
-        const filename = `${hash}.pdf`;
+        // Generate content hash (used both for filename and duplicate detection)
+        const contentHash = crypto.createHash('sha256').update(buffer).digest('hex');
+        const filename = `${contentHash}.pdf`;
+
+        // Check for existing PDF with same content for this user
+        const existingPdf = await Pdf.findOne({ userId, contentHash })
+          .select('_id filename originalFilename createdAt')
+          .lean();
+
+        if (existingPdf) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: 'This PDF has already been uploaded.',
+                    isDuplicate: true,
+                    pdf: {
+                        id: existingPdf._id,
+                        filename: existingPdf.filename,
+                        originalFilename: existingPdf.originalFilename,
+                        createdAt: existingPdf.createdAt,
+                    },
+                },
+                { status: 409 }
+            );
+        }
 
         // Ensure uploads directory exists
         // In production (Railway), we might need ephemeral storage or cloud storage (S3).
@@ -72,9 +93,8 @@ export async function POST(request: NextRequest) {
             filename, // stored filename
             originalFilename,
             fileSize,
-            path: filepath,
-            uploadStatus: 'uploaded',
-            // We start with locked status until we check it
+            contentHash,
+            // We start with locked status until we check/unlock it
             unlockStatus: 'locked',
         });
 
@@ -94,6 +114,19 @@ export async function POST(request: NextRequest) {
 
     } catch (error: any) {
         console.error('Error uploading PDF:', error);
+
+        // Handle potential race conditions on unique index (duplicate contentHash per user)
+        if (error?.code === 11000 && error?.keyPattern?.contentHash) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: 'This PDF has already been uploaded.',
+                    isDuplicate: true,
+                },
+                { status: 409 }
+            );
+        }
+
         return NextResponse.json(
             {
                 error: error?.message || 'Failed to upload file',
