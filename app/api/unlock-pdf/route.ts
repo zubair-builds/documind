@@ -14,6 +14,7 @@ import { extractTextFromPdf } from '@/lib/text-extractor';
 import { existsSync } from 'fs';
 import connectDB from '@/lib/mongodb';
 import Pdf from '@/models/Pdf';
+import crypto from 'crypto';
 
 // Disable body parser to handle file upload manually
 export const dynamic = 'force-dynamic';
@@ -112,6 +113,31 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    // Compute content hash for duplicate detection
+    const contentHash = crypto.createHash('sha256').update(buffer).digest('hex');
+
+    // Check for existing PDF with same content for this user
+    const existingPdf = await Pdf.findOne({ userId, contentHash })
+      .select('_id filename originalFilename createdAt')
+      .lean();
+
+    if (existingPdf) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'This PDF has already been uploaded.',
+          isDuplicate: true,
+          pdf: {
+            id: existingPdf._id,
+            filename: existingPdf.filename,
+            originalFilename: existingPdf.originalFilename,
+            createdAt: existingPdf.createdAt,
+          },
+        },
+        { status: 409 }
+      );
+    }
+
     // Write uploaded file to temp directory
     inputPath = await writeTempFile(buffer, file.name);
 
@@ -172,6 +198,7 @@ export async function POST(request: NextRequest) {
       extractedText: textResult.text || '',
       extractedPages: textResult.extractedPages || 0,
       unlockStatus: 'success',
+      contentHash,
       processingMetadata: {
         method: 'qpdf',
         processingTime,
@@ -199,6 +226,18 @@ export async function POST(request: NextRequest) {
     // Clean up temp files on error
     if (inputPath) await deleteTempFile(inputPath);
     if (outputPath) await deleteTempFile(outputPath);
+
+    // Handle potential race conditions on unique index (duplicate contentHash per user)
+    if (error?.code === 11000 && error?.keyPattern?.contentHash) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'This PDF has already been uploaded.',
+          isDuplicate: true,
+        },
+        { status: 409 }
+      );
+    }
 
     return NextResponse.json(
       {
