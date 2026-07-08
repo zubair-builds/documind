@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, DragEvent, ChangeEvent, FormEvent } from 'react';
+import ChatInterface from '@/components/ChatInterface';
 
 interface PreviewData {
   text: string;
@@ -8,6 +9,8 @@ interface PreviewData {
   extractedPages: number;
   downloadUrl: string;
   filename: string;
+  pdfId: string;
+  downloadId: string;
 }
 
 export default function Home() {
@@ -241,6 +244,8 @@ export default function Home() {
         extractedPages: data.extractedPages,
         downloadUrl: data.downloadUrl,
         filename: data.filename,
+        pdfId: data.pdfId,
+        downloadId: data.downloadId,
       });
     } catch (err: any) {
       setError(err.message || 'An error occurred while unlocking the PDF');
@@ -631,6 +636,11 @@ export default function Home() {
                 Upload Another
               </button>
             </div>
+
+            {/* Smart Chat Section */}
+            {previewData.pdfId && previewData.downloadId && (
+              <ChatInterface pdfId={previewData.pdfId} downloadId={previewData.downloadId} />
+            )}
           </div>
         )}
 

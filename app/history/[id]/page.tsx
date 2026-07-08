@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import ChatInterface from '@/components/ChatInterface';
 import AnalysisProgress from '@/components/AnalysisProgress';
 import { formatCurrency } from '@/lib/formatters';
 import { formatAnalysisTime } from '@/lib/analysisStats';
@@ -59,7 +60,7 @@ export default function PdfDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [pdf, setPdf] = useState<PdfDetail | null>(null);
   const [statement, setStatement] = useState<StatementData | null>(null);
-  const [activeTab, setActiveTab] = useState<'text' | 'statement'>('text');
+  const [activeTab, setActiveTab] = useState<'text' | 'statement' | 'chat'>('text');
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState('');
@@ -335,6 +336,16 @@ export default function PdfDetailPage({ params }: { params: { id: string } }) {
                     <span className="ml-2 inline-block w-2 h-2 bg-green-500 rounded-full"></span>
                   )}
                 </button>
+                <button
+                  onClick={() => setActiveTab('chat')}
+                  className={`px-6 py-4 text-sm font-medium transition-colors ${
+                    activeTab === 'chat'
+                      ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                  }`}
+                >
+                  Smart Chat
+                </button>
               </div>
             </div>
 
@@ -597,6 +608,13 @@ export default function PdfDetailPage({ params }: { params: { id: string } }) {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Chat Tab */}
+              {activeTab === 'chat' && (
+                <div>
+                  <ChatInterface pdfId={params.id} />
                 </div>
               )}
             </div>
