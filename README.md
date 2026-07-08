@@ -6,6 +6,8 @@ A Next.js application that securely unlocks password-protected PDF files server-
 
 - 🔒 **Secure PDF Unlocking**: Server-side PDF decryption using password with node-qpdf2
 - 🤖 **AI Chat (RAG)**: Chat with your PDF documents! Ask questions and get answers based on the document's content using Google Gemini.
+- 📊 **Financial Statement Analysis**: Use Gemini's massive context window to exhaustively extract, summarize, and categorize credit card transactions from messy bank statements.
+- ⏱️ **Performance Metrics**: Real-time tracking of AI response times and token usage directly in the chat UI.
 - 👤 **User Authentication**: Secure signup and login using NextAuth.
 - 📄 **Text Extraction**: Extract text from PDFs and chunk it for vector embeddings.
 - 🔍 **Vector Search**: In-memory cosine similarity search backed by standard MongoDB (no expensive vector DB required!).
@@ -18,8 +20,8 @@ A Next.js application that securely unlocks password-protected PDF files server-
 - **Next.js 14+** with App Router
 - **TypeScript** for type safety
 - **Tailwind CSS** for styling
-- **MongoDB & Mongoose** for storing users, PDF metadata, text chunks, and vector embeddings
-- **Google Generative AI (Gemini)** for generating embeddings and AI chat responses
+- **MongoDB & Mongoose** for storing users, PDF metadata, text chunks, statement analytics, and vector embeddings
+- **Google Generative AI (Gemini)** for embeddings and chat (`gemini-3.1-flash-lite` and `gemini-2.5-flash` for data extraction)
 - **NextAuth.js** for authentication
 - **node-qpdf2** for PDF unlocking (requires qpdf installed)
 - **pdf-parse** for text extraction from PDFs
@@ -89,8 +91,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 2. **Upload & Unlock**: Users upload locked PDFs and provide a password. The PDF is decrypted using node-qpdf2.
 3. **Chunking & Embeddings**: The text is extracted via pdf-parse, chunked into smaller segments, and sent to Gemini to generate vector embeddings.
 4. **Storage**: PDF metadata, chunks, and embeddings are saved in standard MongoDB.
-5. **AI Chat (RAG)**: When a user asks a question, the app generates an embedding for the query, performs an in-memory cosine similarity search against the document's chunks, and sends the most relevant chunks to Gemini to generate an answer.
-6. **Download**: Users can download the fully unlocked PDF.
+5. **Statement Analysis**: For bank statements, the entire document is analyzed by Gemini to extract structured transaction data, categories, and totals.
+6. **AI Chat (RAG)**: When a user asks a question, the app generates an embedding for the query, performs an in-memory cosine similarity search against the document's chunks, and sends the most relevant chunks to Gemini to generate an answer.
+7. **Download**: Users can download the fully unlocked PDF.
 
 ## Deployment
 

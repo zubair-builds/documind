@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { StatementData } from '@/types';
 
+export const modelVersion = "gemini-3.1-flash-lite";
+
 const getApiKey = (): string => {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -53,7 +55,7 @@ export const parseStatement = async (statementText: string): Promise<StatementDa
     try {
         const genAI = new GoogleGenerativeAI(getApiKey());
         const model = genAI.getGenerativeModel({
-            model: 'gemini-2.5-flash',
+            model: modelVersion,
             generationConfig: {
                 responseMimeType: "application/json",
                 responseSchema: statementSchema,
@@ -84,7 +86,7 @@ export const parseStatement = async (statementText: string): Promise<StatementDa
                 return 0;
             }
         });
-        
+
         return parsedData as StatementData;
 
     } catch (error) {

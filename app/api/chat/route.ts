@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import PdfChunk from '@/models/PdfChunk';
+import ChatMessage from '@/models/ChatMessage';
 import { generateEmbedding, cosineSimilarity } from '@/lib/rag-utils';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { modelVersion } from '@/lib/geminiService';
 
 const apiKey = process.env.GEMINI_API_KEY || '';
 const genAI = new GoogleGenerativeAI(apiKey);
@@ -41,6 +43,16 @@ export async function POST(request: NextRequest) {
 
     const context = topChunks.map(c => c.text).join('\n\n---\n\n');
 
+    // Fetch previous messages for context
+    const previousMessages = await ChatMessage.find({ pdfId, userId: user.id })
+      .sort({ createdAt: 1 })
+      .lean();
+
+    const history = previousMessages.map((msg: any) => ({
+      role: msg.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: msg.content }],
+    }));
+
     const prompt = `You are a helpful assistant. Answer the user's question based ONLY on the following context extracted from a document. If you cannot find the answer in the context, say "I couldn't find the answer in the document."
 
 CONTEXT:
@@ -48,12 +60,30 @@ ${context}
 
 QUESTION:
 ${message}`;
-    const modelVersion = "gemini-3.1-flash-lite"
     const model = genAI.getGenerativeModel({ model: modelVersion });
-    const result = await model.generateContent(prompt);
+    
+    const chatSession = model.startChat({ history });
+    
+    const startTime = Date.now();
+    const result = await chatSession.sendMessage(prompt);
+    const endTime = Date.now();
+    const responseTime = (endTime - startTime) / 1000;
+    
     const responseText = result.response.text();
+    const usageMetadata = result.response.usageMetadata;
+    const tokens = usageMetadata ? {
+      promptTokens: usageMetadata.promptTokenCount || 0,
+      completionTokens: usageMetadata.candidatesTokenCount || 0,
+      totalTokens: usageMetadata.totalTokenCount || 0
+    } : undefined;
 
-    return NextResponse.json({ response: responseText });
+    // Save the new messages to the database
+    await ChatMessage.insertMany([
+      { pdfId, userId: user.id, role: 'user', content: message },
+      { pdfId, userId: user.id, role: 'assistant', content: responseText, responseTime, tokens }
+    ]);
+
+    return NextResponse.json({ response: responseText, responseTime, tokens });
   } catch (error: any) {
     console.error('Chat error:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
