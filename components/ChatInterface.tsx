@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Bot, User, Copy, ThumbsUp, ThumbsDown, Loader2, ArrowUp } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function ChatInterface({ pdfId, downloadId }: { pdfId: string; downloadId?: string }) {
   const [messages, setMessages] = useState<{role: 'user' | 'assistant', content: string}[]>([]);
@@ -6,6 +9,33 @@ export default function ChatInterface({ pdfId, downloadId }: { pdfId: string; do
   const [isIndexed, setIsIndexed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load chat state from local storage on mount
+  useEffect(() => {
+    const savedState = localStorage.getItem(`chatState_${pdfId}`);
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+        if (parsed.messages) setMessages(parsed.messages);
+        if (parsed.isIndexed) setIsIndexed(parsed.isIndexed);
+      } catch (e) {
+        console.error('Failed to parse saved chat state', e);
+      }
+    }
+  }, [pdfId]);
+
+  // Save chat state to local storage when it changes
+  useEffect(() => {
+    if (isIndexed || messages.length > 0) {
+      localStorage.setItem(`chatState_${pdfId}`, JSON.stringify({ messages, isIndexed }));
+    }
+  }, [pdfId, messages, isIndexed]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
 
   const handleIngest = async () => {
     setLoading(true);
@@ -26,7 +56,8 @@ export default function ChatInterface({ pdfId, downloadId }: { pdfId: string; do
     }
   };
 
-  const handleSend = async () => {
+  const handleSend = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!input.trim()) return;
     const userMessage = input.trim();
     setInput('');
@@ -50,26 +81,32 @@ export default function ChatInterface({ pdfId, downloadId }: { pdfId: string; do
     }
   };
 
+  const handleCopy = async (content: string, idx: number) => {
+    await navigator.clipboard.writeText(content);
+    setCopiedIndex(idx);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
   if (!isIndexed) {
     return (
-      <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
-        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Chat with this PDF</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-          Enable the AI to read your document so you can ask questions directly about its content.
+      <div className="flex flex-col h-[600px] bg-slate-900/30 border border-slate-800/80 rounded-3xl overflow-hidden shadow-2xl relative items-center justify-center p-8 text-center">
+        <div className="w-20 h-20 bg-indigo-500/10 rounded-full flex items-center justify-center mb-6">
+          <Bot className="w-10 h-10 text-indigo-400" />
+        </div>
+        <h3 className="text-2xl font-bold text-white mb-3">Initialize Document Intelligence</h3>
+        <p className="text-slate-400 mb-8 max-w-md">
+          Enable the AI to securely index your document. This allows for lightning-fast answers and deep contextual understanding.
         </p>
-        {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+        {error && <p className="text-pink-400 text-sm mb-4 bg-pink-500/10 px-4 py-2 rounded-lg border border-pink-500/20">{error}</p>}
         <button
           onClick={handleIngest}
           disabled={loading}
-          className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+          className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 disabled:text-slate-400 text-white font-semibold py-3 px-8 rounded-xl transition-all shadow-[0_0_20px_-5px_rgba(99,102,241,0.4)] flex items-center justify-center gap-3"
         >
           {loading ? (
             <>
-              <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Initializing...
+               <Loader2 className="w-5 h-5 animate-spin" />
+               Processing Document...
             </>
           ) : (
             'Enable Smart Chat'
@@ -80,50 +117,134 @@ export default function ChatInterface({ pdfId, downloadId }: { pdfId: string; do
   }
 
   return (
-    <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6 flex flex-col h-[500px]">
-      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Ask Questions</h3>
-      <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-4 border border-gray-200 dark:border-gray-700 flex flex-col gap-4">
+    <div className="flex flex-col h-[600px] bg-slate-900/30 border border-slate-800/80 rounded-3xl overflow-hidden shadow-2xl relative">
+      {/* Subtle Top Gradient for depth */}
+      <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-slate-900/80 to-transparent pointer-events-none z-10"></div>
+      
+      {/* Chat Messages Area */}
+      <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 scroll-smooth z-0">
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
-            <svg className="w-12 h-12 mb-3 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-            </svg>
-            <p className="text-sm italic text-center">Chat is ready.<br/>Ask a question about your document.</p>
+          <div className="h-full flex flex-col items-center justify-center text-slate-500">
+             <div className="w-16 h-16 bg-slate-800/50 rounded-2xl flex items-center justify-center mb-4 border border-slate-700/50">
+               <Bot className="w-8 h-8 text-indigo-400" />
+             </div>
+             <p className="font-medium text-slate-300">Document indexed successfully.</p>
+             <p className="text-sm">Ask a question to start the conversation.</p>
           </div>
         )}
+        
         {messages.map((msg, idx) => (
-          <div key={idx} className={`max-w-[85%] rounded-lg p-3 ${msg.role === 'user' ? 'bg-indigo-600 text-white self-end' : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 self-start shadow-sm'}`}>
-            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+          <div key={idx} className={`flex items-start space-x-4 ${msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+            
+            {/* Avatar */}
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
+              msg.role === 'assistant' 
+                ? 'bg-gradient-to-br from-indigo-500 to-purple-600' 
+                : 'bg-slate-800 border border-slate-700'
+            }`}>
+              {msg.role === 'assistant' ? <Bot className="w-5 h-5 text-white" /> : <User className="w-5 h-5 text-slate-300" />}
+            </div>
+            
+            {/* Message Bubble */}
+            <div className={`max-w-[85%] rounded-3xl p-5 ${
+              msg.role === 'user' 
+                ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-tr-sm shadow-[0_4px_20px_-4px_rgba(99,102,241,0.4)]' 
+                : 'bg-gradient-to-b from-slate-900/60 to-slate-900/30 border border-slate-700/50 text-slate-300 rounded-tl-sm shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-xl'
+            }`}>
+              <div className="text-[15px] prose prose-invert max-w-none">
+                {msg.role === 'assistant' ? (
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      p: ({node, ...props}) => <p className="leading-relaxed mb-4 last:mb-0" {...props} />,
+                      ul: ({node, ...props}) => <ul className="space-y-2 mb-4 list-disc list-inside marker:text-indigo-500 ml-1" {...props} />,
+                      ol: ({node, ...props}) => <ol className="space-y-2 mb-4 list-decimal list-inside marker:text-indigo-500 ml-1" {...props} />,
+                      li: ({node, ...props}) => (
+                        <li className="leading-relaxed text-slate-300">
+                          {props.children}
+                        </li>
+                      ),
+                      strong: ({node, ...props}) => <strong className="text-white font-semibold" {...props} />,
+                      h3: ({node, ...props}) => <h3 className="text-lg font-semibold text-white mb-3 mt-6 first:mt-0" {...props} />,
+                      h4: ({node, ...props}) => <h4 className="text-base font-semibold text-white mb-2 mt-4 first:mt-0" {...props} />,
+                      code: ({node, inline, ...props}: any) => 
+                        inline ? (
+                          <code className="bg-slate-800/80 text-indigo-300 px-1.5 py-0.5 rounded font-mono text-sm" {...props} />
+                        ) : (
+                          <div className="bg-slate-950/80 rounded-xl p-4 mb-4 border border-slate-800 overflow-x-auto">
+                            <code className="font-mono text-sm text-slate-300" {...props} />
+                          </div>
+                        ),
+                      table: ({node, ...props}) => (
+                        <div className="overflow-x-auto mb-4 border border-slate-700/50 rounded-xl">
+                          <table className="w-full text-left border-collapse" {...props} />
+                        </div>
+                      ),
+                      th: ({node, ...props}) => <th className="px-4 py-3 bg-slate-900/80 font-medium text-white border-b border-slate-700/50" {...props} />,
+                      td: ({node, ...props}) => <td className="px-4 py-3 border-b border-slate-700/50 last:border-0" {...props} />
+                    }}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
+                ) : (
+                  <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                )}
+              </div>
+
+              {/* AI Action Bar */}
+              {msg.role === 'assistant' && (
+                <div className="flex items-center space-x-2 mt-5 pt-3 border-t border-slate-800/80 text-slate-500">
+                  <button onClick={() => handleCopy(msg.content, idx)} className="p-1.5 hover:bg-slate-800 hover:text-slate-300 rounded-md transition-all flex items-center" title="Copy text">
+                    <Copy className="w-3.5 h-3.5 mr-1.5" /> <span className="text-xs font-medium">{copiedIndex === idx ? 'Copied!' : 'Copy'}</span>
+                  </button>
+                  <div className="flex-1"></div>
+                  <button className="p-1.5 hover:bg-slate-800 hover:text-emerald-400 rounded-md transition-all" title="Helpful">
+                    <ThumbsUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button className="p-1.5 hover:bg-slate-800 hover:text-pink-400 rounded-md transition-all" title="Not helpful">
+                    <ThumbsDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         ))}
+        
         {loading && (
-          <div className="self-start bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg p-3 max-w-[85%] shadow-sm flex items-center gap-2">
-             <svg className="animate-spin h-4 w-4 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            <p className="text-sm italic text-gray-500">Retrieving answers...</p>
+          <div className="flex items-start space-x-4">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-lg bg-gradient-to-br from-indigo-500 to-purple-600">
+              <Bot className="w-5 h-5 text-white" />
+            </div>
+            <div className="bg-slate-900/80 border border-slate-700/50 text-slate-300 rounded-3xl rounded-tl-sm shadow-xl backdrop-blur-md p-5 flex items-center space-x-3">
+              <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />
+              <span className="text-sm italic">Analyzing document...</span>
+            </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
-      {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSend()}
-          placeholder="e.g. Summarize the main points..."
-          className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-800 dark:text-white shadow-sm"
-          disabled={loading}
-        />
-        <button
-          onClick={handleSend}
-          disabled={loading || !input.trim()}
-          className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-sm"
-        >
-          Send
-        </button>
+
+      {error && <div className="px-4 py-2 mx-4 bg-pink-500/10 border border-pink-500/20 text-pink-400 text-sm rounded-xl mb-4">{error}</div>}
+      
+      {/* Input Area */}
+      <div className="p-4 bg-slate-900/80 backdrop-blur-md border-t border-slate-800 z-20">
+        <form onSubmit={handleSend} className="relative flex items-center max-w-5xl mx-auto">
+          <input 
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="e.g. Summarize the main points..."
+            className="w-full bg-slate-950/50 border border-slate-700 rounded-2xl pl-5 pr-14 py-4 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-slate-200 transition-all placeholder:text-slate-500"
+            disabled={loading}
+          />
+          <button 
+            type="submit"
+            disabled={loading || !input.trim()}
+            className="absolute right-2 p-2.5 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-400 hover:to-indigo-500 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500 text-white rounded-xl transition-all disabled:cursor-not-allowed shadow-[0_0_15px_-3px_rgba(99,102,241,0.4)] flex items-center justify-center"
+          >
+            <ArrowUp className="w-5 h-5" />
+          </button>
+        </form>
       </div>
     </div>
   );

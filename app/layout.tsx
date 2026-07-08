@@ -4,8 +4,8 @@ import { Providers } from "./providers";
 import Header from "@/components/Header";
 
 export const metadata: Metadata = {
-  title: "PDF Assist - Unlock Password-Protected PDFs",
-  description: "Securely unlock password-protected PDF files online",
+  title: "DocuMind - Unlock & Chat with PDFs",
+  description: "Securely unlock password-protected PDF files and analyze them with AI",
 };
 
 export default function RootLayout({
@@ -15,7 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">
+      <body className="antialiased min-h-screen bg-slate-950 text-slate-50 font-sans selection:bg-indigo-500/30">
         <Providers>
           <Header />
           {children}

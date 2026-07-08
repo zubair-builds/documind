@@ -1,8 +1,7 @@
 # Security Documentation
 
 ## Overview
-
-PDF Assist implements multiple layers of security to protect user data and prevent abuse.
+DocuMind implements multiple layers of security to protect user data and prevent abuse.
 
 ## Security Features
 

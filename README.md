@@ -1,26 +1,28 @@
-# PDF Assist
+# DocuMind
 
-A Next.js application that securely unlocks password-protected PDF files server-side and returns the unlocked PDF to the user.
+A Next.js application that securely unlocks password-protected PDF files server-side, extracts text, and allows you to chat with your PDFs using an AI assistant powered by Google Gemini.
 
 ## Features
 
 - 🔒 **Secure PDF Unlocking**: Server-side PDF decryption using password with node-qpdf2
-- 📄 **Text Preview**: Extract and preview text from the first few pages before downloading
-- 💾 **Smart Download**: Download unlocked PDFs via secure temporary URLs
-- 🗑️ **Automatic Cleanup**: Uploaded and processed files are deleted after 5 minutes or download
-- 📁 **Secure Storage**: Files are stored in a temp folder (not publicly accessible)
-- ✅ **File Validation**: Validates file type and size before processing
-- 🎨 **Modern UI**: Beautiful drag-and-drop interface with loading states
-- 🌙 **Dark Mode**: Supports both light and dark themes
+- 🤖 **AI Chat (RAG)**: Chat with your PDF documents! Ask questions and get answers based on the document's content using Google Gemini.
+- 👤 **User Authentication**: Secure signup and login using NextAuth.
+- 📄 **Text Extraction**: Extract text from PDFs and chunk it for vector embeddings.
+- 🔍 **Vector Search**: In-memory cosine similarity search backed by standard MongoDB (no expensive vector DB required!).
+- 💾 **Smart Download**: Download unlocked PDFs via secure temporary URLs.
+- ✅ **File Validation**: Validates file type and size before processing.
+- 🎨 **Modern UI**: Beautiful drag-and-drop interface with loading states and dark mode.
 
 ## Tech Stack
 
 - **Next.js 14+** with App Router
 - **TypeScript** for type safety
 - **Tailwind CSS** for styling
+- **MongoDB & Mongoose** for storing users, PDF metadata, text chunks, and vector embeddings
+- **Google Generative AI (Gemini)** for generating embeddings and AI chat responses
+- **NextAuth.js** for authentication
 - **node-qpdf2** for PDF unlocking (requires qpdf installed)
 - **pdf-parse** for text extraction from PDFs
-- **React** for UI components
 
 ## Installation
 
@@ -36,17 +38,32 @@ A Next.js application that securely unlocks password-protected PDF files server-
    ```
 
 3. **Configure environment variables**:
-   Copy `.env.example` to `.env.local` and adjust values if needed:
+   Copy `.env.example` to `.env.local` and adjust values:
    ```bash
    cp .env.example .env.local
    ```
 
-   Default configuration:
+   Required variables in `.env.local`:
    ```env
+   # Storage and Uploads
    MAX_FILE_SIZE_MB=10
    TEMP_DIR=./temp
    PDF_PREVIEW_PAGES=3
    TEMP_FILE_TIMEOUT=300
+
+   # Database
+   MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/pdf-assist
+
+   # NextAuth
+   NEXTAUTH_URL=http://localhost:3000
+   NEXTAUTH_SECRET=your_nextauth_secret_here
+
+   # Security
+   ENCRYPTION_KEY=your_32_character_encryption_key_here
+   JWT_SECRET=your_jwt_secret_here
+
+   # AI integration
+   GEMINI_API_KEY=your_google_gemini_api_key_here
    ```
 
 4. **Install qpdf** (required for node-qpdf2):
@@ -66,212 +83,38 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### Production
-
-Build and start the production server:
-
-```bash
-npm run build
-npm start
-```
-
 ## How It Works
 
-1. **Upload**: User uploads a password-protected PDF via drag-and-drop or file picker
-2. **Validate**: File type and size are validated on both client and server
-3. **Store**: File is temporarily stored in a secure temp folder (not in /public)
-4. **Unlock**: PDF is decrypted using node-qpdf2
-5. **Extract**: Text is extracted from the first N pages (configurable, default 3)
-6. **Preview**: User sees the extracted text content in a scrollable preview
-7. **Download**: User can download the full unlocked PDF via a secure temporary URL
-8. **Cleanup**: Files are automatically deleted after download or 5-minute timeout
-
-## Project Structure
-
-```
-pdfAssist/
-├── app/
-│   ├── api/
-│   │   ├── unlock-pdf/
-│   │   │   └── route.ts          # API endpoint for PDF unlocking & text extraction
-│   │   └── download-pdf/
-│   │       └── [id]/
-│   │           └── route.ts      # API endpoint for downloading by ID
-│   ├── page.tsx                  # Main upload UI with text preview
-│   ├── layout.tsx                # Root layout
-│   └── globals.css               # Global styles
-├── lib/
-│   ├── pdf-unlocker.ts           # PDF unlocking logic using node-qpdf2
-│   ├── text-extractor.ts         # Text extraction using pdf-parse
-│   └── file-utils.ts             # Temp file management with download IDs
-├── temp/                         # Secure temp folder (gitignored)
-├── public/                       # Static assets
-├── .env.example                  # Environment variables template
-├── .env.local                    # Local environment variables (gitignored)
-├── middleware.ts                 # Security middleware
-├── next.config.js                # Next.js configuration
-├── tailwind.config.ts            # Tailwind CSS configuration
-├── tsconfig.json                 # TypeScript configuration
-└── package.json                  # Dependencies
-```
-
-## API Endpoint
-
-### POST /api/unlock-pdf
-
-Unlocks a password-protected PDF file and returns text preview with download URL.
-
-**Request:**
-- Content-Type: `multipart/form-data`
-- Body:
-  - `file`: PDF file (max size configurable via `MAX_FILE_SIZE_MB`)
-  - `password`: String - Password to unlock the PDF
-
-**Response:**
-- Success (200):
-  - Content-Type: `application/json`
-  - Body:
-    ```json
-    {
-      "success": true,
-      "text": "Extracted text content...",
-      "totalPages": 10,
-      "extractedPages": 3,
-      "downloadId": "uuid",
-      "downloadUrl": "/api/download-pdf/uuid",
-      "filename": "unlocked-document.pdf"
-    }
-    ```
-- Error (400/500):
-  - Content-Type: `application/json`
-  - Body: `{ "error": "Error message" }`
-
-**Example using curl:**
-
-```bash
-curl -X POST http://localhost:3000/api/unlock-pdf \
-  -F "file=@/path/to/locked.pdf" \
-  -F "password=yourpassword"
-```
-
-### GET /api/download-pdf/[id]
-
-Downloads an unlocked PDF by its download ID.
-
-**Response:**
-- Success (200):
-  - Content-Type: `application/pdf`
-  - Body: Unlocked PDF file (binary)
-  - File is deleted after download
-- Error (404/500):
-  - Content-Type: `application/json`
-  - Body: `{ "error": "Error message" }`
-
-**Example:**
-
-```bash
-curl http://localhost:3000/api/download-pdf/your-download-id \
-  --output unlocked.pdf
-```
-
-## Security Features
-
-### File Type Validation
-- Only PDF files are accepted
-- Validates both file extension and MIME type
-- Client-side and server-side validation
-
-### File Size Limits
-- Configurable maximum file size (default: 10MB)
-- Prevents denial-of-service attacks
-
-### Secure File Storage
-- Files stored in `/temp` directory (not `/public`)
-- Temp directory is gitignored
-- Files are never accessible via HTTP
-
-### Automatic Cleanup
-- Files are deleted immediately after processing
-- Cleanup happens even if errors occur
-- No files are left on the server
-
-### Password Protection
-- Passwords are only used server-side
-- Never logged or stored
-- Transmitted securely over HTTPS in production
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `MAX_FILE_SIZE_MB` | Maximum file size in megabytes | `10` |
-| `TEMP_DIR` | Directory for temporary files | `./temp` |
-| `PDF_PREVIEW_PAGES` | Number of pages to extract text from | `3` |
-| `TEMP_FILE_TIMEOUT` | Seconds before auto-cleanup of temp files | `300` (5 min) |
-
-### PDF Unlocking Method
-
-The application uses **node-qpdf2** for PDF decryption:
-
-- Fast and robust
-- Handles most PDF encryption types
-- Requires qpdf to be installed on the system
-- Industry-standard tool for PDF manipulation
-
-If decryption fails, an error is returned to the user with a message to verify the password.
-
-## Development
-
-### Adding New Features
-
-1. **File utilities**: Add to `lib/file-utils.ts`
-2. **PDF processing**: Modify `lib/pdf-unlocker.ts`
-3. **API logic**: Update `app/api/unlock-pdf/route.ts`
-4. **UI changes**: Edit `app/page.tsx`
-
-### Running Tests
-
-```bash
-npm run lint
-npm run build
-```
+1. **Authentication**: Users sign up and log in to manage their PDFs securely.
+2. **Upload & Unlock**: Users upload locked PDFs and provide a password. The PDF is decrypted using node-qpdf2.
+3. **Chunking & Embeddings**: The text is extracted via pdf-parse, chunked into smaller segments, and sent to Gemini to generate vector embeddings.
+4. **Storage**: PDF metadata, chunks, and embeddings are saved in standard MongoDB.
+5. **AI Chat (RAG)**: When a user asks a question, the app generates an embedding for the query, performs an in-memory cosine similarity search against the document's chunks, and sends the most relevant chunks to Gemini to generate an answer.
+6. **Download**: Users can download the fully unlocked PDF.
 
 ## Deployment
 
-### Vercel (Recommended)
+### Render (Recommended for Full-Stack)
 
-1. Push your code to GitHub
-2. Import project in Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy
+When deploying to Render (or other platforms with ephemeral storage), you must be aware of how uploaded files are stored:
 
-**Note**: Ensure qpdf is available in your deployment environment. Vercel supports it by default.
+1. **Environment Variables**: Make sure to add all the environment variables (`MONGODB_URI`, `GEMINI_API_KEY`, `NEXTAUTH_SECRET`, etc.) to your Render Web Service.
+2. **⚠️ Persistent Disk (Critical)**: By default, this app saves uploaded PDFs to the local file system (e.g., `data/uploads/`). Render uses an **ephemeral file system**, meaning uploaded files will be deleted on every deploy or restart.
+   - **Solution**: Go to your Render Dashboard -> Your Web Service -> **Disks**. Add a persistent disk (e.g., mounted at `/var/data`). Then, update the upload path in `app/api/pdfs/upload/route.ts` to point to `/var/data/uploads`.
+   - **Alternative**: Modify the upload logic to save files directly to AWS S3, Cloudinary, or Vercel Blob.
 
-### Other Platforms
+### Vercel
 
-Ensure your deployment environment has:
-- Node.js 18+
-- qpdf installed system-wide
-- Write permissions for the temp directory
+If deploying to Vercel, ensure:
+1. `qpdf` is available in your deployment environment (Vercel supports it by default for some runtimes).
+2. You migrate file uploads from the local filesystem to Vercel Blob or AWS S3, as Vercel is completely serverless and cannot store files persistently on disk.
 
-## Troubleshooting
+## Security Features
 
-### "QPDF failed" Error
-
-- **Cause**: qpdf not installed or not in PATH
-- **Solution**: Install qpdf using your package manager
-
-### "Failed to unlock PDF with all available methods"
-
-- **Cause**: Incorrect password or unsupported encryption
-- **Solution**: Verify the password is correct
-
-### File Size Limit Exceeded
-
-- **Cause**: File larger than `MAX_FILE_SIZE_MB`
-- **Solution**: Increase the limit in `.env.local`
+- **Authentication**: JWT-based session management with NextAuth.
+- **In-Memory Vector Search**: Does not require syncing data to a third-party vector database; your document chunks stay within your MongoDB database.
+- **File Type & Size Validation**: Prevents malicious uploads and DoS attacks.
+- **Password Protection**: PDF passwords are only used server-side and are never logged or stored.
 
 ## Contributing
 
@@ -283,12 +126,3 @@ Ensure your deployment environment has:
 ## License
 
 MIT License - feel free to use this project for any purpose.
-
-## Support
-
-For issues, questions, or suggestions, please open an issue on GitHub.
-
----
-
-Built with ❤️ using Next.js, TypeScript, and Tailwind CSS
-
