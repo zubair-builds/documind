@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, User, Copy, ThumbsUp, ThumbsDown, Loader2, ArrowUp } from 'lucide-react';
+import { Bot, User, Copy, ThumbsUp, ThumbsDown, Loader2, ArrowUp, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-export default function ChatInterface({ pdfId, downloadId }: { pdfId: string; downloadId?: string }) {
+export default function ChatInterface({ pdfId, downloadId, isGlobal = false }: { pdfId?: string; downloadId?: string; isGlobal?: boolean }) {
   const [messages, setMessages] = useState<{
     role: 'user' | 'assistant',
     content: string,
     responseTime?: number,
-    tokens?: { promptTokens: number, completionTokens: number, totalTokens: number }
+    tokens?: { promptTokens: number, completionTokens: number, totalTokens: number },
+    suggestedQuestions?: string[]
   }[]>([]);
   const [input, setInput] = useState('');
   const [isIndexed, setIsIndexed] = useState(false);
@@ -17,11 +18,34 @@ export default function ChatInterface({ pdfId, downloadId }: { pdfId: string; do
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const globalSuggestions = [
+    "What is my total spending across all accounts?",
+    "Are there any unusually high expenses?",
+    "Summarize the key trends in my statements."
+  ];
+
+  const docSuggestions = [
+    "What is the total amount due?",
+    "List the top 3 highest transactions.",
+    "Are there any late fees or penalties?"
+  ];
+
+  const initialSuggestions = isGlobal ? globalSuggestions : docSuggestions;
+  
+  const lastAssistantMessage = messages.length > 0 && messages[messages.length - 1].role === 'assistant' 
+    ? messages[messages.length - 1] 
+    : null;
+    
+  const currentSuggestions = lastAssistantMessage?.suggestedQuestions?.length 
+    ? lastAssistantMessage.suggestedQuestions 
+    : (messages.length === 0 ? initialSuggestions : []);
+
   // Load chat state from database on mount
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const res = await fetch(`/api/chat/status?pdfId=${pdfId}`);
+        const url = pdfId ? `/api/chat/status?pdfId=${pdfId}` : `/api/chat/status`;
+        const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
           setIsIndexed(data.isIndexed);
@@ -80,13 +104,51 @@ export default function ChatInterface({ pdfId, downloadId }: { pdfId: string; do
         role: 'assistant',
         content: data.response,
         responseTime: data.responseTime,
-        tokens: data.tokens
+        tokens: data.tokens,
+        suggestedQuestions: data.suggestedQuestions
       }]);
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    // Populate and immediately send
+    setInput(suggestion);
+    
+    // We need a slightly modified version of handleSend that takes the string directly
+    // to avoid waiting for the state update
+    const sendSuggestion = async () => {
+      setInput('');
+      setMessages(prev => [...prev, { role: 'user', content: suggestion }]);
+      setLoading(true);
+      setError('');
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pdfId, message: suggestion }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to get response');
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: data.response,
+          responseTime: data.responseTime,
+          tokens: data.tokens,
+          suggestedQuestions: data.suggestedQuestions
+        }]);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    sendSuggestion();
   };
 
   const handleCopy = async (content: string, idx: number) => {
@@ -101,25 +163,31 @@ export default function ChatInterface({ pdfId, downloadId }: { pdfId: string; do
         <div className="w-20 h-20 bg-indigo-500/10 rounded-full flex items-center justify-center mb-6">
           <Bot className="w-10 h-10 text-indigo-400" />
         </div>
-        <h3 className="text-2xl font-bold text-white mb-3">Initialize Document Intelligence</h3>
+        <h3 className="text-2xl font-bold text-white mb-3">
+          {isGlobal ? 'Initialize Global Chat' : 'Initialize Document Intelligence'}
+        </h3>
         <p className="text-slate-400 mb-8 max-w-md">
-          Enable the AI to securely index your document. This allows for lightning-fast answers and deep contextual understanding.
+          {isGlobal 
+            ? 'You need to upload and index at least one document to start chatting with your knowledge base.'
+            : 'Enable the AI to securely index your document. This allows for lightning-fast answers and deep contextual understanding.'}
         </p>
         {error && <p className="text-pink-400 text-sm mb-4 bg-pink-500/10 px-4 py-2 rounded-lg border border-pink-500/20">{error}</p>}
-        <button
-          onClick={handleIngest}
-          disabled={loading}
-          className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 disabled:text-slate-400 text-white font-semibold py-3 px-8 rounded-xl transition-all shadow-[0_0_20px_-5px_rgba(99,102,241,0.4)] flex items-center justify-center gap-3"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Processing Document...
-            </>
-          ) : (
-            'Enable Smart Chat'
-          )}
-        </button>
+        {!isGlobal && (
+          <button
+            onClick={handleIngest}
+            disabled={loading}
+            className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 disabled:text-slate-400 text-white font-semibold py-3 px-8 rounded-xl transition-all shadow-[0_0_20px_-5px_rgba(99,102,241,0.4)] flex items-center justify-center gap-3"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Processing Document...
+              </>
+            ) : (
+              'Enable Smart Chat'
+            )}
+          </button>
+        )}
       </div>
     );
   }
@@ -136,8 +204,12 @@ export default function ChatInterface({ pdfId, downloadId }: { pdfId: string; do
             <div className="w-16 h-16 bg-slate-800/50 rounded-2xl flex items-center justify-center mb-4 border border-slate-700/50">
               <Bot className="w-8 h-8 text-indigo-400" />
             </div>
-            <p className="font-medium text-slate-300">Document indexed successfully.</p>
-            <p className="text-sm">Ask a question to start the conversation.</p>
+            <p className="font-medium text-slate-300">
+              {isGlobal ? 'Global Chat Ready.' : 'Document indexed successfully.'}
+            </p>
+            <p className="text-sm">
+              {isGlobal ? 'Ask a question across all your uploaded documents.' : 'Ask a question to start the conversation.'}
+            </p>
           </div>
         )}
 
@@ -244,6 +316,22 @@ export default function ChatInterface({ pdfId, downloadId }: { pdfId: string; do
 
       {error && <div className="px-4 py-2 mx-4 bg-pink-500/10 border border-pink-500/20 text-pink-400 text-sm rounded-xl mb-4">{error}</div>}
 
+      {/* Suggested Chat Options */}
+      {!loading && currentSuggestions.length > 0 && (messages.length === 0 || messages[messages.length - 1].role === 'assistant') && (
+        <div className="px-4 pb-2 z-20 mx-auto max-w-5xl w-full flex flex-wrap gap-2 justify-center">
+          {currentSuggestions.map((suggestion, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleSuggestionClick(suggestion)}
+              className="text-xs sm:text-sm bg-slate-800/80 hover:bg-indigo-500/20 text-slate-300 hover:text-indigo-300 border border-slate-700/50 hover:border-indigo-500/30 rounded-full px-4 py-2 transition-all flex items-center shadow-sm text-left"
+            >
+              <Sparkles className="w-3.5 h-3.5 mr-2 text-indigo-400/70 shrink-0" />
+              <span>{suggestion}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Input Area */}
       <div className="p-4 bg-slate-900/80 backdrop-blur-md border-t border-slate-800 z-20">
         <form onSubmit={handleSend} className="relative flex items-center max-w-5xl mx-auto">
@@ -251,7 +339,7 @@ export default function ChatInterface({ pdfId, downloadId }: { pdfId: string; do
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="e.g. Summarize the main points..."
+            placeholder={isGlobal ? "e.g. Summarize all my recent statements..." : "e.g. Summarize the main points..."}
             className="w-full bg-slate-950/50 border border-slate-700 rounded-2xl pl-5 pr-14 py-4 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-slate-200 transition-all placeholder:text-slate-500"
             disabled={loading}
           />

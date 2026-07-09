@@ -3,14 +3,14 @@
 import { useState, useRef, useEffect, DragEvent, ChangeEvent, FormEvent, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import ChatInterface from '@/components/ChatInterface';
-import { 
-  ShieldCheck, 
-  MessageSquare, 
-  Zap, 
-  UploadCloud, 
-  Lock, 
-  Unlock, 
-  FileText, 
+import {
+  ShieldCheck,
+  MessageSquare,
+  Zap,
+  UploadCloud,
+  Lock,
+  Unlock,
+  FileText,
   ChevronRight,
   CheckCircle2,
   X,
@@ -23,9 +23,9 @@ import {
   AlertCircle,
   PieChart as PieChartIcon
 } from 'lucide-react';
-import { 
-  PieChart, 
-  Pie, 
+import {
+  PieChart,
+  Pie,
   Cell,
   ResponsiveContainer,
   Tooltip as RechartsTooltip
@@ -68,7 +68,7 @@ function PageContent() {
   const [selectedPasswordId, setSelectedPasswordId] = useState('');
   const [savePassword, setSavePassword] = useState(false);
   const [passwordLabel, setPasswordLabel] = useState('');
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -179,10 +179,10 @@ function PageContent() {
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       const droppedFile = files[0];
-      const isValidFile = droppedFile.type === 'application/pdf' || 
-                         droppedFile.type === 'text/csv' ||
-                         droppedFile.name.endsWith('.pdf') ||
-                         droppedFile.name.endsWith('.csv');
+      const isValidFile = droppedFile.type === 'application/pdf' ||
+        droppedFile.type === 'text/csv' ||
+        droppedFile.name.endsWith('.pdf') ||
+        droppedFile.name.endsWith('.csv');
       if (isValidFile) {
         setFile(droppedFile);
         setError('');
@@ -196,10 +196,10 @@ function PageContent() {
     const files = e.target.files;
     if (files && files.length > 0) {
       const selectedFile = files[0];
-      const isValidFile = selectedFile.type === 'application/pdf' || 
-                         selectedFile.type === 'text/csv' ||
-                         selectedFile.name.endsWith('.pdf') ||
-                         selectedFile.name.endsWith('.csv');
+      const isValidFile = selectedFile.type === 'application/pdf' ||
+        selectedFile.type === 'text/csv' ||
+        selectedFile.name.endsWith('.pdf') ||
+        selectedFile.name.endsWith('.csv');
       if (isValidFile) {
         setFile(selectedFile);
         setError('');
@@ -227,7 +227,7 @@ function PageContent() {
     setPreviewData(null);
     setProgress(0);
     setElapsedTime(0);
-    
+
     // Start timer
     const startTime = Date.now();
     timerRef.current = setInterval(() => {
@@ -280,7 +280,7 @@ function PageContent() {
         pdfId: data.pdfId,
         downloadId: data.downloadId,
       });
-      
+
       setView('chat'); // Automatically switch to chat view
     } catch (err: any) {
       setError(err.message || 'An error occurred while unlocking the PDF');
@@ -333,28 +333,28 @@ function PageContent() {
           <section className="relative overflow-hidden pt-20 pb-32">
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-2xl h-[500px] bg-indigo-500/20 blur-[120px] rounded-full pointer-events-none"></div>
-            
+
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
               <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-800/50 border border-slate-700 mb-8">
                 <span className="flex h-2 w-2 rounded-full bg-emerald-400"></span>
-                <span className="text-xs font-medium text-slate-300">Gemini AI Powered Assistant</span>
+                <span className="text-xs font-medium text-slate-300">AI Powered Assistant</span>
               </div>
-              
+
               <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight">
                 Unlock PDFs. <br className="hidden md:block" />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
                   Converse with your Data.
                 </span>
               </h1>
-              
+
               <p className="text-lg md:text-xl text-slate-400 max-w-3xl mx-auto mb-10 leading-relaxed">
-                Stop scrolling through endless pages. Securely unlock password-protected PDF files 
-                and let our intelligent AI instantly analyze, summarize, and answer any question 
-                about your documents. 
+                Stop scrolling through endless pages. Securely unlock password-protected PDF files
+                and let our intelligent AI instantly analyze, summarize, and answer any question
+                about your documents.
               </p>
-              
+
               <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                <button 
+                <button
                   onClick={() => {
                     setView('upload');
                     router.push('/?view=upload');
@@ -363,7 +363,6 @@ function PageContent() {
                 >
                   Try it for Free <ChevronRight className="ml-2 w-5 h-5" />
                 </button>
-                <p className="text-sm text-slate-500 mt-4 sm:mt-0 sm:ml-4">Max 10MB.</p>
               </div>
             </div>
           </section>
@@ -386,7 +385,7 @@ function PageContent() {
                     Upload your password-protected PDF. We securely unlock it in milliseconds. Passwords are never stored, ensuring your sensitive data remains entirely yours.
                   </p>
                 </div>
-                
+
                 <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 hover:border-purple-500/50 transition-colors group">
                   <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                     <Zap className="w-6 h-6 text-purple-400" />
@@ -422,17 +421,16 @@ function PageContent() {
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
             {/* Dropzone */}
             {!file ? (
-              <div 
+              <div
                 onDragEnter={handleDragEnter}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer group ${
-                  isDragging 
-                    ? 'border-indigo-500 bg-indigo-500/10' 
-                    : 'border-slate-700 hover:border-indigo-500 hover:bg-slate-800/50'
-                }`}
+                className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer group ${isDragging
+                  ? 'border-indigo-500 bg-indigo-500/10'
+                  : 'border-slate-700 hover:border-indigo-500 hover:bg-slate-800/50'
+                  }`}
               >
                 <input
                   ref={fileInputRef}
@@ -468,11 +466,11 @@ function PageContent() {
             {/* Form Section */}
             <form onSubmit={handleSubmit} className={`transition-all duration-500 ${file ? 'opacity-100 h-auto' : 'opacity-50 pointer-events-none h-auto'}`}>
               <div className="space-y-5 mt-8">
-                
+
                 {savedPasswords.length > 0 && (
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">Use Saved Password</label>
-                    <select 
+                    <select
                       value={selectedPasswordId}
                       onChange={(e) => handlePasswordSelect(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none"
@@ -486,12 +484,12 @@ function PageContent() {
                     </select>
                   </div>
                 )}
-                
+
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">File Password</label>
                   <div className="relative">
                     <Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-500" />
-                    <input 
+                    <input
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -522,7 +520,7 @@ function PageContent() {
                   </div>
                 )}
 
-                <button 
+                <button
                   disabled={!file || !password || loading}
                   className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold rounded-xl px-4 py-4 mt-6 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
@@ -555,26 +553,26 @@ function PageContent() {
 
       {view === 'chat' && previewData && (
         <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col animate-in fade-in duration-500">
-          
+
           {/* Header */}
-          <button 
+          <button
             onClick={() => setView('history')}
             className="text-sm font-medium text-indigo-400 hover:text-indigo-300 flex items-center mb-6 transition-colors group w-fit"
           >
-            <ArrowLeft className="w-4 h-4 mr-1.5 group-hover:-translate-x-1 transition-transform" /> 
+            <ArrowLeft className="w-4 h-4 mr-1.5 group-hover:-translate-x-1 transition-transform" />
             Back to History
           </button>
-          
+
           <div className="flex justify-between items-end mb-8">
             <h2 className="text-3xl font-bold text-white">Document Intelligence</h2>
             <div className="flex space-x-3">
-              <button 
+              <button
                 onClick={handleDownload}
                 className="text-sm font-medium bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 px-4 py-2 rounded-xl transition-colors"
               >
                 Download PDF
               </button>
-              <button 
+              <button
                 onClick={handleUploadAnother}
                 className="text-sm text-slate-300 hover:text-white px-4 py-2 bg-slate-800 rounded-xl transition-colors"
               >
@@ -589,7 +587,7 @@ function PageContent() {
               <Database className="w-5 h-5 text-slate-400" />
               <h3 className="text-lg font-semibold text-white">Metadata</h3>
             </div>
-            
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-y-8 gap-x-4">
               <div>
                 <p className="text-sm text-slate-500 mb-1 font-medium">Filename</p>
@@ -640,7 +638,7 @@ function PageContent() {
 
           {/* Navigation Tabs */}
           <div className="flex space-x-8 border-b border-slate-800/80 mb-8">
-            <button 
+            <button
               onClick={() => setActiveDetailsTab('chat')}
               className={`pb-4 text-sm font-medium transition-colors relative flex items-center ${activeDetailsTab === 'chat' ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'}`}
             >
@@ -648,7 +646,7 @@ function PageContent() {
               Smart Chat
               {activeDetailsTab === 'chat' && <span className="absolute bottom-[-1px] left-0 w-full h-0.5 bg-indigo-500 rounded-t-full shadow-[0_0_8px_rgba(99,102,241,0.6)]"></span>}
             </button>
-            <button 
+            <button
               onClick={() => setActiveDetailsTab('analysis')}
               className={`pb-4 text-sm font-medium transition-colors relative flex items-center ${activeDetailsTab === 'analysis' ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'}`}
             >
@@ -656,7 +654,7 @@ function PageContent() {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 ml-2"></span>
               {activeDetailsTab === 'analysis' && <span className="absolute bottom-[-1px] left-0 w-full h-0.5 bg-indigo-500 rounded-t-full"></span>}
             </button>
-            <button 
+            <button
               onClick={() => setActiveDetailsTab('raw')}
               className={`pb-4 text-sm font-medium transition-colors relative ${activeDetailsTab === 'raw' ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'}`}
             >
@@ -668,14 +666,14 @@ function PageContent() {
           {/* Smart Chat Section */}
           {activeDetailsTab === 'chat' && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-               <ChatInterface pdfId={previewData.pdfId} downloadId={previewData.downloadId} />
+              <ChatInterface pdfId={previewData.pdfId} downloadId={previewData.downloadId} />
             </div>
           )}
 
           {/* Statement Analysis */}
           {activeDetailsTab === 'analysis' && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
-              
+
               {/* Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 backdrop-blur-sm relative overflow-hidden group shadow-xl">
@@ -717,7 +715,7 @@ function PageContent() {
                 </div>
 
                 <div className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 backdrop-blur-sm relative overflow-hidden group shadow-xl">
-                   <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity duration-500">
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity duration-500">
                     <Database className="w-24 h-24 text-indigo-500 transform translate-x-4 -translate-y-4" />
                   </div>
                   <div className="flex items-center space-x-3 mb-4 relative z-10">
@@ -738,7 +736,7 @@ function PageContent() {
 
               {/* Main Area */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+
                 {/* Chart Area */}
                 <div className="lg:col-span-1 bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 backdrop-blur-sm shadow-xl flex flex-col">
                   <div className="flex items-center justify-between mb-6">
@@ -776,7 +774,7 @@ function PageContent() {
                             <Cell key={`cell-${index}`} fill={color} />
                           ))}
                         </Pie>
-                        <RechartsTooltip 
+                        <RechartsTooltip
                           contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '16px', color: '#f1f5f9', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)' }}
                           itemStyle={{ color: '#f1f5f9', fontWeight: 500 }}
                           formatter={(value: number) => [`$${value}`, 'Amount']}
@@ -794,8 +792,8 @@ function PageContent() {
                 <div className="lg:col-span-2 bg-slate-900/40 border border-slate-800/80 rounded-3xl overflow-hidden backdrop-blur-sm flex flex-col shadow-xl">
                   <div className="p-6 border-b border-slate-800/80 flex justify-between items-center bg-slate-900/50">
                     <div className="flex items-center space-x-3">
-                       <AlertCircle className="w-5 h-5 text-amber-400" />
-                       <h3 className="font-semibold text-lg text-white">Identified Anomalies & Flags</h3>
+                      <AlertCircle className="w-5 h-5 text-amber-400" />
+                      <h3 className="font-semibold text-lg text-white">Identified Anomalies & Flags</h3>
                     </div>
                     <span className="bg-amber-500/10 text-amber-400 text-xs font-medium px-2.5 py-1 rounded-full border border-amber-500/20 shadow-[0_0_10px_-2px_rgba(245,158,11,0.2)]">
                       3 Action Items
@@ -852,7 +850,7 @@ function PageContent() {
                           <td className="px-6 py-4 text-slate-400">Uncategorized</td>
                           <td className="px-6 py-4 text-right font-medium text-slate-200">-$150.00</td>
                           <td className="px-6 py-4">
-                             <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-pink-500/10 text-pink-400 border border-pink-500/20">
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-pink-500/10 text-pink-400 border border-pink-500/20">
                               Missing Category
                             </span>
                           </td>
@@ -872,10 +870,10 @@ function PageContent() {
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-semibold text-lg">Raw Text Extract</h3>
                   <button
-                      onClick={handleCopyText}
-                      className="text-sm bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 text-slate-300"
-                    >
-                      {copySuccess ? 'Copied!' : 'Copy Text'}
+                    onClick={handleCopyText}
+                    className="text-sm bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 text-slate-300"
+                  >
+                    {copySuccess ? 'Copied!' : 'Copy Text'}
                   </button>
                 </div>
                 <div className="bg-slate-950 rounded-xl p-4 h-[400px] overflow-y-auto border border-slate-800">
@@ -883,7 +881,7 @@ function PageContent() {
                     {previewData.text}
                   </pre>
                 </div>
-                
+
                 {/* Save Password Option */}
                 {!savePassword ? (
                   <div className="mt-6 pt-6 border-t border-slate-800">
@@ -932,7 +930,7 @@ function PageContent() {
               </div>
             </div>
           )}
-          
+
         </div>
       )}
     </main>
@@ -950,19 +948,19 @@ export default function Home() {
 // Quick tiny helper icon to make the Smart Chat tab look extra premium
 function SparklesIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      width="24" 
-      height="24" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       {...props}
     >
-      <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+      <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
     </svg>
   );
 }

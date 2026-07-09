@@ -158,7 +158,7 @@ export default function PdfDetailPage({ params }: { params: { id: string } }) {
       setStatement(data.statement);
       setAnalysisTime(data.processingTime);
       setActiveTab('statement');
-      
+
       // Refresh PDF data to get updated documentType
       await fetchPdfDetails();
       // Refresh stats
@@ -182,7 +182,7 @@ export default function PdfDetailPage({ params }: { params: { id: string } }) {
     const seconds = Math.floor(ms / 1000);
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    
+
     if (minutes > 0) {
       return `${minutes}m ${remainingSeconds}s`;
     }
@@ -268,11 +268,10 @@ export default function PdfDetailPage({ params }: { params: { id: string } }) {
                     Status
                   </p>
                   <span
-                    className={`inline-block px-3 py-1 text-sm rounded-full ${
-                      pdf.unlockStatus === 'success'
+                    className={`inline-block px-3 py-1 text-sm rounded-full ${pdf.unlockStatus === 'success'
                         ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                         : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                    }`}
+                      }`}
                   >
                     {pdf.unlockStatus}
                   </span>
@@ -298,11 +297,10 @@ export default function PdfDetailPage({ params }: { params: { id: string } }) {
                     Document Type
                   </p>
                   <span
-                    className={`inline-block px-3 py-1 text-sm rounded-full ${
-                      pdf.documentType === 'statement'
+                    className={`inline-block px-3 py-1 text-sm rounded-full ${pdf.documentType === 'statement'
                         ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
                         : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-                    }`}
+                      }`}
                   >
                     {pdf.documentType}
                   </span>
@@ -315,21 +313,19 @@ export default function PdfDetailPage({ params }: { params: { id: string } }) {
               <div className="flex border-b border-gray-200 dark:border-gray-700">
                 <button
                   onClick={() => setActiveTab('text')}
-                  className={`px-6 py-4 text-sm font-medium transition-colors ${
-                    activeTab === 'text'
+                  className={`px-6 py-4 text-sm font-medium transition-colors ${activeTab === 'text'
                       ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                  }`}
+                    }`}
                 >
                   Raw Text
                 </button>
                 <button
                   onClick={() => setActiveTab('statement')}
-                  className={`px-6 py-4 text-sm font-medium transition-colors ${
-                    activeTab === 'statement'
+                  className={`px-6 py-4 text-sm font-medium transition-colors ${activeTab === 'statement'
                       ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                  }`}
+                    }`}
                 >
                   Statement Analysis
                   {statement && (
@@ -338,11 +334,10 @@ export default function PdfDetailPage({ params }: { params: { id: string } }) {
                 </button>
                 <button
                   onClick={() => setActiveTab('chat')}
-                  className={`px-6 py-4 text-sm font-medium transition-colors ${
-                    activeTab === 'chat'
+                  className={`px-6 py-4 text-sm font-medium transition-colors ${activeTab === 'chat'
                       ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                  }`}
+                    }`}
                 >
                   Smart Chat
                 </button>
@@ -424,7 +419,7 @@ export default function PdfDetailPage({ params }: { params: { id: string } }) {
                         AI Statement Analysis
                       </h3>
                       <p className="text-gray-600 dark:text-gray-400 mb-4">
-                        Use Google Gemini AI to extract structured data from this credit card statement
+                        Use AI to extract structured data from this credit card statement
                       </p>
                       {analysisStats && analysisStats.totalAnalyses > 0 && (
                         <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
@@ -575,22 +570,20 @@ export default function PdfDetailPage({ params }: { params: { id: string } }) {
                                     {transaction.description}
                                   </td>
                                   <td
-                                    className={`py-3 px-4 text-sm text-right font-semibold ${
-                                      transaction.type === 'DEBIT'
+                                    className={`py-3 px-4 text-sm text-right font-semibold ${transaction.type === 'DEBIT'
                                         ? 'text-red-600 dark:text-red-400'
                                         : 'text-green-600 dark:text-green-400'
-                                    }`}
+                                      }`}
                                   >
                                     {transaction.type === 'DEBIT' ? '-' : '+'}
                                     {formatCurrency(transaction.amount)}
                                   </td>
                                   <td className="py-3 px-4 text-center">
                                     <span
-                                      className={`inline-block px-2 py-1 text-xs rounded-full ${
-                                        transaction.type === 'DEBIT'
+                                      className={`inline-block px-2 py-1 text-xs rounded-full ${transaction.type === 'DEBIT'
                                           ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                                           : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                      }`}
+                                        }`}
                                     >
                                       {transaction.type}
                                     </span>

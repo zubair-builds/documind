@@ -1,7 +1,7 @@
 import mongoose, { Schema, Model, Document, Types } from 'mongoose';
 
 export interface IChatMessage extends Document {
-  pdfId: Types.ObjectId;
+  pdfId?: Types.ObjectId;
   userId: Types.ObjectId;
   role: 'user' | 'assistant';
   content: string;
@@ -11,6 +11,7 @@ export interface IChatMessage extends Document {
     completionTokens: number;
     totalTokens: number;
   };
+  suggestedQuestions?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -20,7 +21,7 @@ const ChatMessageSchema: Schema<IChatMessage> = new Schema(
     pdfId: {
       type: Schema.Types.ObjectId,
       ref: 'Pdf',
-      required: true,
+      required: false,
       index: true,
     },
     userId: {
@@ -45,6 +46,10 @@ const ChatMessageSchema: Schema<IChatMessage> = new Schema(
       promptTokens: Number,
       completionTokens: Number,
       totalTokens: Number,
+    },
+    suggestedQuestions: {
+      type: [String],
+      default: undefined,
     },
   },
   {

@@ -13,20 +13,32 @@ export async function GET(request: NextRequest) {
     }
 
     const pdfId = request.nextUrl.searchParams.get('pdfId');
-    if (!pdfId) {
-      return NextResponse.json({ error: 'pdfId is required.' }, { status: 400 });
-    }
 
     await connectDB();
 
-    // Check if the document has been indexed
-    const chunkExists = await PdfChunk.exists({ pdfId });
-    const isIndexed = !!chunkExists;
+    let isIndexed = false;
+    let query: any = { userId: user.id };
+
+    if (pdfId) {
+      const chunkExists = await PdfChunk.exists({ pdfId });
+      isIndexed = !!chunkExists;
+      query.pdfId = pdfId;
+    } else {
+      // Global chat mode: Check if user has at least one PDF indexed
+      const { default: Pdf } = await import('@/models/Pdf');
+      const userPdfs = await Pdf.find({ userId: user.id }).select('_id').lean();
+      if (userPdfs && userPdfs.length > 0) {
+        const pdfIds = userPdfs.map((p: any) => p._id);
+        const chunkExists = await PdfChunk.exists({ pdfId: { $in: pdfIds } });
+        isIndexed = !!chunkExists;
+      }
+      query.pdfId = { $exists: false };
+    }
 
     // Fetch chat history for this user and this document
-    const messages = await ChatMessage.find({ pdfId, userId: user.id })
+    const messages = await ChatMessage.find(query)
       .sort({ createdAt: 1 })
-      .select('role content responseTime tokens -_id')
+      .select('role content responseTime tokens suggestedQuestions -_id')
       .lean();
 
     return NextResponse.json({ isIndexed, messages });

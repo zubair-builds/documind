@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 import Header from "@/components/Header";
+import FloatingGlobalChat from "@/components/FloatingGlobalChat";
 
 export const metadata: Metadata = {
   title: "DocuMind - Unlock & Chat with PDFs",
@@ -19,6 +20,7 @@ export default function RootLayout({
         <Providers>
           <Header />
           {children}
+          <FloatingGlobalChat />
         </Providers>
       </body>
     </html>
