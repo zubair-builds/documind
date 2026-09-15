@@ -1,9 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-// Initialize the Google Generative AI with API key from environment
-const apiKey = process.env.GEMINI_API_KEY || '';
-const genAI = new GoogleGenerativeAI(apiKey);
-const EMBEDDING_MODEL = 'gemini-embedding-001';
+import { getProvider } from '@/lib/llm';
 
 export function chunkText(text: string, chunkSize: number = 1000, overlap: number = 200): string[] {
   if (!text) return [];
@@ -18,11 +13,8 @@ export function chunkText(text: string, chunkSize: number = 1000, overlap: numbe
 }
 
 export async function generateEmbedding(text: string): Promise<number[]> {
-  if (!apiKey) throw new Error("GEMINI_API_KEY is not set.");
-  const model = genAI.getGenerativeModel({ model: EMBEDDING_MODEL });
-  const result = await model.embedContent(text);
-  const embedding = result.embedding;
-  return embedding.values;
+  const provider = getProvider();
+  return provider.embed(text);
 }
 
 export function cosineSimilarity(vecA: number[], vecB: number[]): number {

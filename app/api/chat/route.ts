@@ -4,11 +4,8 @@ import PdfChunk from '@/models/PdfChunk';
 import ChatMessage from '@/models/ChatMessage';
 import Pdf from '@/models/Pdf';
 import { generateEmbedding, cosineSimilarity } from '@/lib/rag-utils';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { modelVersion } from '@/lib/geminiService';
-
-const apiKey = process.env.GEMINI_API_KEY || '';
-const genAI = new GoogleGenerativeAI(apiKey);
+import { getProvider } from '@/lib/llm';
+import { writeTrace } from '@/lib/tracing';
 
 export async function POST(request: NextRequest) {
   try {
@@ -71,10 +68,10 @@ export async function POST(request: NextRequest) {
       .sort({ createdAt: 1 })
       .lean();
 
-    const history = previousMessages.map((msg: any) => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }],
-    }));
+    const chatHistory = previousMessages.map((msg: any) => ({
+      role: msg.role === 'assistant' ? 'assistant' : 'user',
+      content: msg.content
+    })) as any[];
 
     const prompt = `You are a helpful assistant. Answer the user's question based ONLY on the following context extracted from documents. If you cannot find the answer in the context, say "I couldn't find the answer in the document(s)."
 Always cite the source document name when providing an answer.
@@ -92,21 +89,13 @@ ${context}
 
 QUESTION:
 ${message}`;
-    const model = genAI.getGenerativeModel({ 
-      model: modelVersion,
-      generationConfig: {
-        responseMimeType: "application/json"
-      }
-    });
+    const provider = getProvider();
     
-    const chatSession = model.startChat({ history });
+    const chatResponse = await provider.chat(prompt, undefined, chatHistory);
+    const responseTime = chatResponse.latencyMs / 1000;
+    const tokens = chatResponse.tokens;
     
-    const startTime = Date.now();
-    const result = await chatSession.sendMessage(prompt);
-    const endTime = Date.now();
-    const responseTime = (endTime - startTime) / 1000;
-    
-    const responseTextRaw = result.response.text();
+    const responseTextRaw = chatResponse.text;
     let responseText = responseTextRaw;
     let suggestedQuestions: string[] = [];
 
@@ -115,15 +104,19 @@ ${message}`;
       responseText = parsed.response || responseTextRaw;
       suggestedQuestions = parsed.suggestedQuestions || [];
     } catch (e) {
-      console.warn("Failed to parse Gemini JSON response", e);
+      console.warn("Failed to parse JSON response", e);
     }
 
-    const usageMetadata = result.response.usageMetadata;
-    const tokens = usageMetadata ? {
-      promptTokens: usageMetadata.promptTokenCount || 0,
-      completionTokens: usageMetadata.candidatesTokenCount || 0,
-      totalTokens: usageMetadata.totalTokenCount || 0
-    } : undefined;
+    // Write trace asynchronously
+    writeTrace({
+      endpoint: '/api/chat',
+      prompt,
+      chunks: topChunks,
+      latencyMs: chatResponse.latencyMs,
+      tokens,
+      pdfId: pdfId || undefined,
+      userId: user.id
+    });
 
     // Save the new messages to the database
     const newMessageDocs = [

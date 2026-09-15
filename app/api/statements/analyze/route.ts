@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Pdf from '@/models/Pdf';
 import Statement from '@/models/Statement';
-import { parseStatement } from '@/lib/geminiService';
-
+import { getProvider } from '@/lib/llm';
+import { writeTrace } from '@/lib/tracing';
 export const dynamic = 'force-dynamic';
 
 /**
@@ -87,11 +87,13 @@ export async function POST(request: NextRequest) {
     let errorMessage;
 
     try {
-      statementData = await parseStatement(pdf.extractedText);
+      const provider = getProvider();
+      const result = await provider.analyzeStatement(pdf.extractedText);
+      statementData = result.data;
     } catch (error: any) {
       analysisSuccess = false;
       errorMessage = error?.message || 'Failed to analyze statement';
-      console.error('Gemini analysis error:', error);
+      console.error('Provider analysis error:', error);
 
       return NextResponse.json(
         { error: errorMessage },
@@ -100,6 +102,18 @@ export async function POST(request: NextRequest) {
     }
 
     const processingTime = Date.now() - startTime;
+    
+    // Write trace asynchronously
+    if (analysisSuccess) {
+        writeTrace({
+            endpoint: '/api/statements/analyze',
+            prompt: 'Statement Analysis Extraction (System Prompt + File Content)',
+            latencyMs: result.latencyMs,
+            tokens: result.tokens,
+            pdfId: pdfId,
+            userId: user.id
+        });
+    }
 
     // Save statement to database
     const statement = await Statement.create({
