@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "eval:rag": "npx tsx scripts/eval-rag.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
@@ -19,12 +20,14 @@
     "next": "^14.2.0",
     "next-auth": "^4.24.0",
     "node-qpdf2": "^6.0.0",
+    "openai": "^7.15.0",
     "pdf-parse": "^1.1.1",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-markdown": "^10.1.0",
     "recharts": "^2.12.7",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "tsx": "^4.23.13"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

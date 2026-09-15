@@ -1,0 +1,122 @@
+[
+  {
+    "question": "What is the total new balance on the statement?",
+    "expected_answer": "The new balance is $1,250.45.",
+    "expected_keywords": ["1,250.45", "1250", "balance"],
+    "must_cite": true
+  },
+  {
+    "question": "When is the payment due date?",
+    "expected_answer": "The payment is due on July 15, 2024.",
+    "expected_keywords": ["July 15", "15", "July"],
+    "must_cite": true
+  },
+  {
+    "question": "What was the largest debit transaction this period?",
+    "expected_answer": "The largest debit was $450.00 for Apple Store.",
+    "expected_keywords": ["450.00", "Apple", "debit"],
+    "must_cite": true
+  },
+  {
+    "question": "How much was spent on groceries?",
+    "expected_answer": "A total of $320.50 was spent on groceries across 3 transactions.",
+    "expected_keywords": ["320.50", "groceries"],
+    "must_cite": true
+  },
+  {
+    "question": "Who is the cardholder?",
+    "expected_answer": "The cardholder is Jane Smith.",
+    "expected_keywords": ["Jane", "Smith"],
+    "must_cite": false
+  },
+  {
+    "question": "Did I receive any payments or credits?",
+    "expected_answer": "Yes, a payment of $500.00 was received on June 20.",
+    "expected_keywords": ["payment", "500.00", "June 20"],
+    "must_cite": true
+  },
+  {
+    "question": "What is my total credit limit?",
+    "expected_answer": "Your total credit limit is $5,000.00.",
+    "expected_keywords": ["5,000.00", "5000", "limit"],
+    "must_cite": true
+  },
+  {
+    "question": "Were there any dining expenses?",
+    "expected_answer": "Yes, there was a $45.00 charge at Starbucks and $80.00 at Olive Garden.",
+    "expected_keywords": ["Starbucks", "45.00", "Olive Garden", "80.00"],
+    "must_cite": true
+  },
+  {
+    "question": "What is the minimum payment due?",
+    "expected_answer": "The minimum payment is $35.00.",
+    "expected_keywords": ["35.00", "minimum"],
+    "must_cite": true
+  },
+  {
+    "question": "What date was the statement issued?",
+    "expected_answer": "The statement was issued on June 30, 2024.",
+    "expected_keywords": ["June 30"],
+    "must_cite": true
+  },
+  {
+    "question": "How many transactions were made in total?",
+    "expected_answer": "There were 15 transactions made in this statement period.",
+    "expected_keywords": ["15", "transactions"],
+    "must_cite": false
+  },
+  {
+    "question": "Was there a charge for Netflix?",
+    "expected_answer": "Yes, there is a recurring charge of $15.99 for Netflix on June 10.",
+    "expected_keywords": ["Netflix", "15.99", "June 10"],
+    "must_cite": true
+  },
+  {
+    "question": "Did I travel this month?",
+    "expected_answer": "Yes, there is a $200.00 charge for Delta Airlines.",
+    "expected_keywords": ["Delta", "200.00", "travel"],
+    "must_cite": true
+  },
+  {
+    "question": "What was the total amount of fees charged?",
+    "expected_answer": "There was a late fee of $25.00 charged on June 18.",
+    "expected_keywords": ["late fee", "25.00"],
+    "must_cite": true
+  },
+  {
+    "question": "What is the available credit?",
+    "expected_answer": "The available credit is $3,749.55.",
+    "expected_keywords": ["3,749.55", "available credit"],
+    "must_cite": false
+  },
+  {
+    "question": "How much was spent on utilities?",
+    "expected_answer": "There was a $120.00 charge for PG&E.",
+    "expected_keywords": ["120.00", "PG&E"],
+    "must_cite": true
+  },
+  {
+    "question": "Was there any cash advance?",
+    "expected_answer": "No, there were no cash advances in this statement.",
+    "expected_keywords": ["no", "cash advance"],
+    "must_cite": false
+  },
+  {
+    "question": "What is the APR for purchases?",
+    "expected_answer": "The APR for purchases is 19.99%.",
+    "expected_keywords": ["19.99", "APR"],
+    "must_cite": true
+  },
+  {
+    "question": "Are there any pending charges?",
+    "expected_answer": "The statement only reflects posted transactions; no pending charges are listed.",
+    "expected_keywords": ["posted", "no pending"],
+    "must_cite": false
+  },
+  {
+    "question": "What was the balance on the previous statement?",
+    "expected_answer": "The previous balance was $850.00.",
+    "expected_keywords": ["850.00", "previous"],
+    "must_cite": true
+  }
+]

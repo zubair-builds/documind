@@ -1,0 +1,26 @@
+{
+  "timestamp": "2024-10-25T14:32:10.450Z",
+  "provider": "gemini",
+  "metrics": {
+    "total_cases": 20,
+    "hit_at_k": 0.85,
+    "answer_coverage": 0.9,
+    "mean_latency_ms": 1245.5,
+    "mean_tokens": 450.2
+  },
+  "passed": true,
+  "failures": [
+    {
+      "question": "What is the available credit?",
+      "missing_keywords": ["available credit"],
+      "retrieval_hit": true,
+      "coverage": 0.5
+    },
+    {
+      "question": "Was there any cash advance?",
+      "missing_keywords": ["cash advance"],
+      "retrieval_hit": false,
+      "coverage": 0.5
+    }
+  ]
+}
